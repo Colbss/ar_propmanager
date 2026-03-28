@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useDraggable } from '@vueuse/core'
 import PropListWindow from './PropListWindow.vue'
-import PermissionsWindow from './PermissionsWindow.vue'
+import PlayerAccessWindow from './PlayerAccessWindow.vue'
 
 const props = defineProps<{
   activeTab: 'props' | 'permissions'
@@ -67,14 +67,14 @@ const { style } = useDraggable(windowEl, {
             : 'text-slate-400 hover:text-slate-200'"
           @click="emit('update:activeTab', 'permissions')"
         >
-          <i class="pi pi-shield text-[11px]" />
-          Permissions
+          <i class="pi pi-users text-[11px]" />
+          Player Access
         </button>
       </div>
 
       <!-- Tab content -->
       <PropListWindow v-if="activeTab === 'props'" />
-      <PermissionsWindow v-else />
+      <PlayerAccessWindow v-else />
     </div>
   </Transition>
 </template>

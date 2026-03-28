@@ -54,7 +54,12 @@ const testPropManager = () => {
     group: mockGroups[i % mockGroups.length],
     outlined: false,
   }))
-  debugData({ action: 'openPropManager', data: { props } })
+  const groupStates: Record<string, boolean> = {
+    'Street Furniture': true,
+    'Nature': false,
+    'Vehicles': true,
+  }
+  debugData({ action: 'openPropManager', data: { props, groupStates } })
 }
 
 const items = [

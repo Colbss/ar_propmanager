@@ -3,41 +3,51 @@ import { ref } from 'vue'
 import PropManagerWindow from './PropManagerWindow.vue'
 import { useNuiEvent } from '../composables/useNuiEvent'
 import { usePropManagerStore, type PropEntry } from '../stores/propmanager.store'
-import { usePermissionsStore, type UserPermission } from '../stores/permissions.store'
+import { usePlayerAccessStore, type PlayerAccessEntry } from '../stores/playeraccess.store'
 
 const propStore = usePropManagerStore()
-const permStore = usePermissionsStore()
+const accessStore = usePlayerAccessStore()
 
 const windowVisible = ref(false)
 const activeTab = ref<'props' | 'permissions'>('props')
 
+interface PropPayload {
+  props: PropEntry[]
+  groupStates: Record<string, boolean>
+}
+
+function applyPropPayload(data: PropPayload) {
+  propStore.props = data.props.map((p) => ({ ...p, outlined: p.outlined ?? false }))
+  propStore.groupStates = data.groupStates ?? {}
+}
+
 // ─── Prop list events ─────────────────────────────────────────────────────────
 
-useNuiEvent<{ props: PropEntry[] }>('openPropManager', (data) => {
-  propStore.props = data.props.map((p) => ({ ...p, outlined: p.outlined ?? false }))
+useNuiEvent<PropPayload>('openPropManager', (data) => {
+  applyPropPayload(data)
   activeTab.value = 'props'
   windowVisible.value = true
 })
 
-useNuiEvent<{ props: PropEntry[] }>('updatePropList', (data) => {
-  propStore.props = data.props.map((p) => ({ ...p, outlined: p.outlined ?? false }))
+useNuiEvent<PropPayload>('updatePropList', (data) => {
+  applyPropPayload(data)
 })
 
 useNuiEvent('closePropManager', () => {
   windowVisible.value = false
 })
 
-// ─── Permissions events ───────────────────────────────────────────────────────
+// ─── Player access events ─────────────────────────────────────────────────────
 
-useNuiEvent<{ permissions: UserPermission[]; groups: string[] }>('openPermissions', (data) => {
-  permStore.permissions = data.permissions
-  permStore.availableGroups = data.groups
+useNuiEvent<{ permissions: PlayerAccessEntry[]; groups: string[] }>('openPermissions', (data) => {
+  accessStore.entries = data.permissions
+  accessStore.availableGroups = data.groups
   activeTab.value = 'permissions'
   windowVisible.value = true
 })
 
-useNuiEvent<{ permissions: UserPermission[] }>('updatePermissions', (data) => {
-  permStore.permissions = data.permissions
+useNuiEvent<{ permissions: PlayerAccessEntry[] }>('updatePermissions', (data) => {
+  accessStore.entries = data.permissions
 })
 
 useNuiEvent('closePermissions', () => {

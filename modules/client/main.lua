@@ -3,15 +3,17 @@ LocalState = LocalPlayer.state
 
 local gizmoActive = false
 local currentGizmoEntity = nil
+local currentGizmoOptions = nil
 local originalCoords = nil
 local originalQuat = nil
 
 --- Open the gizmo for the given entity handle.
---- @param entity number  Entity handle
---- @param options table  Optional: { restrictRotationAxes, attachingProp, simpleOverlay }
+--- @param entity  number  Entity handle
+--- @param options table   Optional: { restrictRotationAxes, attachingProp, simpleOverlay, group, dbId, model }
 function common.OpenGizmo(entity, options)
     assert(DoesEntityExist(entity), 'ar_propmanager2: entity does not exist')
     options = options or {}
+    currentGizmoOptions = options
 
     currentGizmoEntity = entity
 
@@ -92,6 +94,7 @@ function common.CloseGizmo(save)
     SendNUIMessage({ action = 'hide', data = {} })
 
     currentGizmoEntity = nil
+    currentGizmoOptions = nil
     originalCoords = nil
     originalQuat = nil
 end
@@ -156,6 +159,20 @@ RegisterNUICallback('ResetRotation', function(_, cb)
 end)
 
 RegisterNUICallback('Finish', function(_, cb)
+    if currentGizmoEntity and DoesEntityExist(currentGizmoEntity) then
+        local pos             = GetEntityCoords(currentGizmoEntity)
+        local qx, qy, qz, qw = GetEntityQuaternion(currentGizmoEntity)
+        local opts            = currentGizmoOptions or {}
+
+        TriggerServerEvent('ar_propmanager2:saveProp', {
+            id         = opts.dbId,
+            netId      = NetworkGetNetworkIdFromEntity(currentGizmoEntity),
+            model      = opts.model or tostring(GetEntityModel(currentGizmoEntity)),
+            position   = { x = pos.x, y = pos.y, z = pos.z },
+            quaternion = { x = qx, y = qy, z = qz, w = qw },
+            group      = opts.group or 'default',
+        })
+    end
     common.CloseGizmo(true)
     cb('ok')
 end)
@@ -196,12 +213,14 @@ end, false)
 -- ─── Prop Manager NUI Callbacks ──────────────────────────────────────────────
 
 RegisterNUICallback('TeleportToProp', function(data, cb)
-    local entity = GetEntityFromNetworkId and GetEntityFromNetworkId(data.id) or data.handle
-    if not entity or not DoesEntityExist(entity) then cb('error') return end
-
-    local pos = GetEntityCoords(entity)
-    SetEntityCoords(PlayerPedId(), pos.x, pos.y, pos.z + 1.0, false, false, false, false)
-    cb('ok')
+    lib.callback('ar_propmanager2:canInteractWithProp', false, function(allowed)
+        if not allowed then cb('denied') return end
+        local entity = NetworkGetEntityFromNetworkId(data.netId or data.id) or data.handle
+        if not entity or not DoesEntityExist(entity) then cb('error') return end
+        local pos = GetEntityCoords(entity)
+        SetEntityCoords(PlayerPedId(), pos.x, pos.y, pos.z + 1.0, false, false, false, false)
+        cb('ok')
+    end, data.id)
 end)
 
 RegisterNUICallback('OutlineProp', function(data, cb)
@@ -211,21 +230,22 @@ RegisterNUICallback('OutlineProp', function(data, cb)
 end)
 
 RegisterNUICallback('DeleteProp', function(data, cb)
-    -- The caller is responsible for providing the entity handle or a lookup mechanism.
-    -- This stub signals intent; extend with your persistence layer as needed.
+    TriggerServerEvent('ar_propmanager2:deleteProp', { id = data.id })
+    cb('ok')
+end)
+
+RegisterNUICallback('ToggleGroup', function(data, cb)
+    TriggerServerEvent('ar_propmanager2:toggleGroup', { group = data.group, enabled = data.enabled })
     cb('ok')
 end)
 
 -- ─── Prop Manager helpers ─────────────────────────────────────────────────────
 
---- Open the prop manager window and populate it with a list of props.
---- @param propList table  Array of { id, handle, model, position={x,y,z}, group }
-function common.OpenPropManager(propList)
+--- Open the prop manager window.
+--- @param payload table  { props = [...], groupStates = { [groupName] = bool } }
+function common.OpenPropManager(payload)
     SetNuiFocus(true, true)
-    SendNUIMessage({
-        action = 'openPropManager',
-        data   = { props = propList }
-    })
+    SendNUIMessage({ action = 'openPropManager', data = payload })
 end
 
 function common.ClosePropManager()
@@ -238,7 +258,7 @@ RegisterCommand('test_prop_manager', function()
     local ped    = PlayerPedId()
     local origin = GetEntityCoords(ped)
     local propList = {}
-    local groups = { 'Street Furniture', 'Vehicles', 'Nature' }
+    local mockGroups = { 'Street Furniture', 'Vehicles', 'Nature' }
 
     local nearby = GetGamePool('CObject')
     local count  = 0
@@ -251,31 +271,34 @@ RegisterCommand('test_prop_manager', function()
                 handle   = obj,
                 model    = tostring(GetEntityModel(obj)),
                 position = { x = pos.x, y = pos.y, z = pos.z },
-                group    = groups[(count % #groups) + 1],
+                group    = mockGroups[(count % #mockGroups) + 1],
                 outlined = false,
             }
             if count >= 20 then break end
         end
     end
 
-    common.OpenPropManager(propList)
+    -- Build mock group states (all enabled)
+    local groupStates = {}
+    for _, g in ipairs(mockGroups) do groupStates[g] = true end
+
+    common.OpenPropManager({ props = propList, groupStates = groupStates })
 end, false)
 
--- ─── Permissions NUI Callbacks ───────────────────────────────────────────────
+-- ─── Player access NUI Callbacks ─────────────────────────────────────────────
 
-RegisterNUICallback('AddPermission', function(data, cb)
-    -- Forward to server for persistence; stub for client-side acknowledgement
-    TriggerServerEvent('ar_propmanager2:addPermission', data)
+RegisterNUICallback('AddPlayerAccess', function(data, cb)
+    TriggerServerEvent('ar_propmanager2:addPlayerAccess', data)
     cb('ok')
 end)
 
-RegisterNUICallback('UpdatePermission', function(data, cb)
-    TriggerServerEvent('ar_propmanager2:updatePermission', data)
+RegisterNUICallback('UpdatePlayerAccess', function(data, cb)
+    TriggerServerEvent('ar_propmanager2:updatePlayerAccess', data)
     cb('ok')
 end)
 
-RegisterNUICallback('DeletePermission', function(data, cb)
-    TriggerServerEvent('ar_propmanager2:deletePermission', data.id)
+RegisterNUICallback('DeletePlayerAccess', function(data, cb)
+    TriggerServerEvent('ar_propmanager2:deletePlayerAccess', data.id)
     cb('ok')
 end)
 
@@ -333,3 +356,33 @@ end)
 exports('OpenPropManager', function(propList)
     common.OpenPropManager(propList)
 end)
+
+-- ─── Server → client events ───────────────────────────────────────────────────
+
+--- Broadcast from server whenever the prop list or group states change.
+--- Refreshes the UI if the prop manager window is currently open.
+RegisterNetEvent('ar_propmanager2:syncPropList', function(payload)
+    SendNUIMessage({ action = 'updatePropList', data = payload })
+end)
+
+--- Server export OpenPropManagerForPlayer triggers this.
+RegisterNetEvent('ar_propmanager2:openPropManagerFromServer', function(propList)
+    common.OpenPropManager(propList)
+end)
+
+--- Server export OpenPermissionsForPlayer triggers this.
+RegisterNetEvent('ar_propmanager2:openPlayerAccessFromServer', function(permList, groups)
+    common.OpenPermissions(permList, groups)
+end)
+
+-- ─── Real prop manager command ────────────────────────────────────────────────
+
+--- Fetches the prop list from the server and opens the manager.
+--- Non-admins only see props in groups they have permission for.
+RegisterCommand('manage_props', function()
+    lib.callback('ar_propmanager2:getProps', false, function(propList)
+        if propList then
+            common.OpenPropManager(propList)
+        end
+    end)
+end, false)

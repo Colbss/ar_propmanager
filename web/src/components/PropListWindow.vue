@@ -8,7 +8,7 @@ const store = usePropManagerStore()
 
 const collapsed = ref(new Set<string>())
 
-const toggleGroup = (name: string) => {
+const toggleCollapse = (name: string) => {
   if (collapsed.value.has(name)) collapsed.value.delete(name)
   else collapsed.value.add(name)
   collapsed.value = new Set(collapsed.value)
@@ -35,6 +35,8 @@ const requestDelete = (id: string) => {
 const cancelDelete = () => {
   pendingDelete.value = null
 }
+
+const isGroupEnabled = (name: string) => store.groupStates[name] !== false
 </script>
 
 <template>
@@ -47,30 +49,60 @@ const cancelDelete = () => {
 
       <div v-for="[groupName, groupProps] in store.groups" :key="groupName">
         <!-- Group header -->
-        <button
-          class="flex w-full items-center gap-2 border-b border-white/5 bg-white/5 px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-400 transition hover:bg-white/10"
-          @click.stop="toggleGroup(groupName)"
+        <div
+          class="flex w-full items-center border-b border-white/5 bg-white/5 px-3 py-2 text-xs"
+          :class="{ 'opacity-50': !isGroupEnabled(groupName) }"
         >
-          <i
-            :class="collapsed.has(groupName) ? 'pi-chevron-right' : 'pi-chevron-down'"
-            class="pi text-[10px] text-slate-500"
-          />
-          {{ groupName }}
-          <span class="ml-auto rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-normal text-slate-400">
-            {{ groupProps.length }}
-          </span>
-        </button>
+          <!-- Collapse toggle -->
+          <button
+            class="flex flex-1 items-center gap-2 text-left font-semibold uppercase tracking-wider text-slate-400 transition hover:text-slate-200"
+            @click.stop="toggleCollapse(groupName)"
+          >
+            <i
+              :class="collapsed.has(groupName) ? 'pi-chevron-right' : 'pi-chevron-down'"
+              class="pi text-[10px] text-slate-500"
+            />
+            {{ groupName }}
+            <span class="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-normal text-slate-400">
+              {{ groupProps.length }}
+            </span>
+          </button>
+
+          <!-- Group state badge + toggle -->
+          <div class="flex shrink-0 items-center gap-1.5">
+            <span
+              class="rounded px-1.5 py-0.5 text-[10px] font-medium"
+              :class="isGroupEnabled(groupName)
+                ? 'bg-green-500/15 text-green-400'
+                : 'bg-white/5 text-slate-500'"
+            >
+              {{ isGroupEnabled(groupName) ? 'Active' : 'Inactive' }}
+            </span>
+            <button
+              class="rounded p-1 transition hover:bg-white/10"
+              :class="isGroupEnabled(groupName) ? 'text-green-400 hover:text-green-300' : 'text-slate-500 hover:text-slate-300'"
+              :title="isGroupEnabled(groupName) ? 'Disable group (despawn all props)' : 'Enable group (spawn all props)'"
+              @click.stop="store.toggleGroup(groupName, !isGroupEnabled(groupName))"
+            >
+              <i class="pi pi-power-off text-[11px]" />
+            </button>
+          </div>
+        </div>
 
         <!-- Prop rows -->
         <template v-if="!collapsed.has(groupName)">
           <div
             v-for="prop in groupProps"
             :key="prop.id"
-            class="flex items-center gap-2 border-b border-white/5 px-4 py-2 text-xs transition hover:bg-white/5"
-            :class="{ 'bg-yellow-500/5 ring-1 ring-inset ring-yellow-500/20': prop.outlined }"
+            class="flex items-center gap-2 border-b border-white/5 px-4 py-2 text-xs transition"
+            :class="[
+              isGroupEnabled(groupName) ? 'hover:bg-white/5' : 'opacity-40',
+              prop.outlined ? 'bg-yellow-500/5 ring-1 ring-inset ring-yellow-500/20' : '',
+            ]"
           >
+
             <!-- Model name -->
-            <span class="w-48 shrink-0 truncate font-mono text-slate-200" :title="prop.model">
+            <span class="w-44 shrink-0 truncate font-mono text-slate-200" :title="prop.model">
               {{ prop.model }}
             </span>
 
@@ -84,6 +116,7 @@ const cancelDelete = () => {
               <!-- Teleport -->
               <button
                 class="rounded px-2 py-1 text-slate-400 transition hover:bg-white/10 hover:text-slate-100"
+                :disabled="!isGroupEnabled(groupName)"
                 title="Teleport to prop"
                 @click.stop="store.teleport(prop.id)"
               >
@@ -93,6 +126,7 @@ const cancelDelete = () => {
               <!-- Outline -->
               <button
                 class="rounded px-2 py-1 transition hover:bg-white/10"
+                :disabled="!isGroupEnabled(groupName)"
                 :class="prop.outlined ? 'text-yellow-400 hover:text-yellow-300' : 'text-slate-400 hover:text-slate-100'"
                 title="Toggle outline"
                 @click.stop="store.outline(prop.id)"

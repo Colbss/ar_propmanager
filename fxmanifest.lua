@@ -9,6 +9,7 @@ version '1.0.0'
 
 dependencies {
     'ox_lib',
+    'oxmysql',
 }
 
 shared_script {

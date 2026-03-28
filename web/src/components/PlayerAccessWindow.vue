@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
-import { usePermissionsStore, type UserPermission } from '../stores/permissions.store'
+import { ref, reactive } from 'vue'
+import { usePlayerAccessStore, type PlayerAccessEntry } from '../stores/playeraccess.store'
 import { useApi } from '../composables/useApi'
 
-const store = usePermissionsStore()
+const store = usePlayerAccessStore()
 
 // ─── Form state ───────────────────────────────────────────────────────────────
 
@@ -20,24 +20,22 @@ const emptyForm = () => ({
 
 const form = reactive(emptyForm())
 
-const formTitle = computed(() => (editingId.value ? 'Edit Permission' : 'Add Permission'))
-
 const openAdd = () => {
   Object.assign(form, emptyForm())
   editingId.value = null
   showForm.value = true
 }
 
-const openEdit = (p: UserPermission) => {
-  form.name = p.name
-  form.identifier = p.identifier
-  form.group = p.group
-  form.hasArea = p.area !== null
-  form.area.x = p.area ? String(p.area.center.x) : ''
-  form.area.y = p.area ? String(p.area.center.y) : ''
-  form.area.z = p.area ? String(p.area.center.z) : ''
-  form.area.radius = p.area ? String(p.area.radius) : ''
-  editingId.value = p.id
+const openEdit = (entry: PlayerAccessEntry) => {
+  form.name = entry.name
+  form.identifier = entry.identifier
+  form.group = entry.group
+  form.hasArea = entry.area !== null
+  form.area.x = entry.area ? String(entry.area.center.x) : ''
+  form.area.y = entry.area ? String(entry.area.center.y) : ''
+  form.area.z = entry.area ? String(entry.area.center.z) : ''
+  form.area.radius = entry.area ? String(entry.area.radius) : ''
+  editingId.value = entry.id
   showForm.value = true
 }
 
@@ -65,12 +63,12 @@ const submitForm = () => {
   }
 
   if (editingId.value) {
-    store.updatePermission({ id: editingId.value, ...payload })
-    const idx = store.permissions.findIndex((p) => p.id === editingId.value)
-    if (idx !== -1) store.permissions[idx] = { id: editingId.value, ...payload }
+    store.updateEntry({ id: editingId.value, ...payload })
+    const idx = store.entries.findIndex((e) => e.id === editingId.value)
+    if (idx !== -1) store.entries[idx] = { id: editingId.value, ...payload }
   } else {
-    store.addPermission(payload)
-    store.permissions.push({ id: `temp_${Date.now()}`, ...payload })
+    store.addEntry(payload)
+    store.entries.push({ id: `temp_${Date.now()}`, ...payload })
   }
 
   cancelForm()
@@ -102,7 +100,7 @@ const pendingDelete = ref<string | null>(null)
 
 const requestDelete = (id: string) => {
   if (pendingDelete.value === id) {
-    store.deletePermission(id)
+    store.deleteEntry(id)
     pendingDelete.value = null
   } else {
     pendingDelete.value = id
@@ -114,20 +112,20 @@ const requestDelete = (id: string) => {
   <div class="flex flex-col" @mousedown="pendingDelete = null">
     <!-- Toolbar -->
     <div class="flex items-center justify-between border-b border-white/10 px-4 py-2">
-      <span class="text-[11px] text-slate-500">{{ store.permissions.length }} user{{ store.permissions.length !== 1 ? 's' : '' }} configured</span>
+      <span class="text-[11px] text-slate-500">{{ store.entries.length }} player{{ store.entries.length !== 1 ? 's' : '' }} with access</span>
       <button
         class="flex items-center gap-1.5 rounded bg-white/10 px-2.5 py-1 text-xs text-slate-300 transition hover:bg-white/20"
         @click.stop="openAdd"
       >
         <i class="pi pi-plus text-[10px]" />
-        Add User
+        Grant Access
       </button>
     </div>
 
     <!-- Add / Edit form -->
     <Transition name="form-slide">
       <div v-if="showForm" class="border-b border-white/10 bg-white/5 p-4">
-        <div class="mb-3 text-xs font-semibold text-slate-300">{{ formTitle }}</div>
+        <div class="mb-3 text-xs font-semibold text-slate-300">{{ editingId ? 'Edit Access Entry' : 'Grant Player Access' }}</div>
 
         <div class="mb-3 grid grid-cols-2 gap-2">
           <!-- Name -->
@@ -146,12 +144,12 @@ const requestDelete = (id: string) => {
             <label class="text-[11px] text-slate-400">Group</label>
             <input
               v-model="form.group"
-              list="perm-groups"
+              list="access-groups"
               type="text"
               placeholder="Select or type group…"
               class="rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-white/25 focus:bg-white/10"
             />
-            <datalist id="perm-groups">
+            <datalist id="access-groups">
               <option v-for="g in store.availableGroups" :key="g" :value="g" />
             </datalist>
           </div>
@@ -223,41 +221,41 @@ const requestDelete = (id: string) => {
             :disabled="!form.name.trim() || !form.identifier.trim() || !form.group"
             @click="submitForm"
           >
-            {{ editingId ? 'Save Changes' : 'Add Permission' }}
+            {{ editingId ? 'Save Changes' : 'Grant Access' }}
           </button>
         </div>
       </div>
     </Transition>
 
-    <!-- Permission list -->
+    <!-- Access list -->
     <div class="max-h-[400px] overflow-y-auto">
-      <div v-if="store.permissions.length === 0" class="py-8 text-center text-xs text-slate-500">
-        No permissions configured.
+      <div v-if="store.entries.length === 0" class="py-8 text-center text-xs text-slate-500">
+        No players have been granted access.
       </div>
 
       <div
-        v-for="perm in store.permissions"
-        :key="perm.id"
+        v-for="entry in store.entries"
+        :key="entry.id"
         class="flex items-center gap-2 border-b border-white/5 px-4 py-2.5 text-xs transition hover:bg-white/5"
       >
         <!-- Name + identifier -->
         <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span class="truncate font-medium text-slate-100">{{ perm.name }}</span>
-          <span class="truncate font-mono text-[11px] text-slate-500" :title="perm.identifier">{{ perm.identifier }}</span>
+          <span class="truncate font-medium text-slate-100">{{ entry.name }}</span>
+          <span class="truncate font-mono text-[11px] text-slate-500" :title="entry.identifier">{{ entry.identifier }}</span>
         </div>
 
         <!-- Group badge -->
         <span class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-[11px] text-slate-300">
-          {{ perm.group }}
+          {{ entry.group }}
         </span>
 
         <!-- Area badge -->
         <span
           class="shrink-0 rounded px-2 py-0.5 text-[11px]"
-          :class="perm.area ? 'bg-blue-500/15 text-blue-400' : 'bg-white/5 text-slate-500'"
-          :title="perm.area ? `Center: ${perm.area.center.x.toFixed(1)}, ${perm.area.center.y.toFixed(1)}, ${perm.area.center.z.toFixed(1)}` : ''"
+          :class="entry.area ? 'bg-blue-500/15 text-blue-400' : 'bg-white/5 text-slate-500'"
+          :title="entry.area ? `Center: ${entry.area.center.x.toFixed(1)}, ${entry.area.center.y.toFixed(1)}, ${entry.area.center.z.toFixed(1)}` : ''"
         >
-          {{ perm.area ? `◎ ${perm.area.radius}m` : 'No Area' }}
+          {{ entry.area ? `◎ ${entry.area.radius}m` : 'No Area' }}
         </span>
 
         <!-- Actions -->
@@ -265,17 +263,17 @@ const requestDelete = (id: string) => {
           <button
             class="rounded px-2 py-1 text-slate-400 transition hover:bg-white/10 hover:text-slate-100"
             title="Edit"
-            @click.stop="openEdit(perm)"
+            @click.stop="openEdit(entry)"
           >
             <i class="pi pi-pencil text-[11px]" />
           </button>
           <button
             class="rounded px-2 py-1 transition hover:bg-white/10"
-            :class="pendingDelete === perm.id ? 'text-red-400' : 'text-slate-400 hover:text-slate-100'"
-            :title="pendingDelete === perm.id ? 'Click again to confirm' : 'Delete'"
-            @click.stop="requestDelete(perm.id)"
+            :class="pendingDelete === entry.id ? 'text-red-400' : 'text-slate-400 hover:text-slate-100'"
+            :title="pendingDelete === entry.id ? 'Click again to confirm' : 'Revoke access'"
+            @click.stop="requestDelete(entry.id)"
           >
-            <i class="pi text-[11px]" :class="pendingDelete === perm.id ? 'pi-exclamation-triangle' : 'pi-trash'" />
+            <i class="pi text-[11px]" :class="pendingDelete === entry.id ? 'pi-exclamation-triangle' : 'pi-trash'" />
           </button>
         </div>
       </div>
