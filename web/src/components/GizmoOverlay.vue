@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
-import { usePMStore } from '../stores/propmanager.store'
+import { useGizmoStore } from '../stores/gizmo.store'
 
-const pmStore = usePMStore()
+const pmStore = useGizmoStore()
 
 // ─── Local editable state ─────────────────────────────────────────────────────
 

@@ -193,8 +193,143 @@ RegisterCommand('test_gizmo', function(source, args, rawCommand)
     common.OpenGizmo(prop)
 end, false)
 
--- ─── Export ───────────────────────────────────────────────────────────────────
+-- ─── Prop Manager NUI Callbacks ──────────────────────────────────────────────
+
+RegisterNUICallback('TeleportToProp', function(data, cb)
+    local entity = GetEntityFromNetworkId and GetEntityFromNetworkId(data.id) or data.handle
+    if not entity or not DoesEntityExist(entity) then cb('error') return end
+
+    local pos = GetEntityCoords(entity)
+    SetEntityCoords(PlayerPedId(), pos.x, pos.y, pos.z + 1.0, false, false, false, false)
+    cb('ok')
+end)
+
+RegisterNUICallback('OutlineProp', function(data, cb)
+    -- Outlined state is tracked in the UI; the server/manager is responsible for
+    -- applying SetEntityDrawOutline if needed via a networked event.
+    cb('ok')
+end)
+
+RegisterNUICallback('DeleteProp', function(data, cb)
+    -- The caller is responsible for providing the entity handle or a lookup mechanism.
+    -- This stub signals intent; extend with your persistence layer as needed.
+    cb('ok')
+end)
+
+-- ─── Prop Manager helpers ─────────────────────────────────────────────────────
+
+--- Open the prop manager window and populate it with a list of props.
+--- @param propList table  Array of { id, handle, model, position={x,y,z}, group }
+function common.OpenPropManager(propList)
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        action = 'openPropManager',
+        data   = { props = propList }
+    })
+end
+
+function common.ClosePropManager()
+    SetNuiFocus(false, false)
+    SendNUIMessage({ action = 'closePropManager', data = {} })
+end
+
+RegisterCommand('test_prop_manager', function()
+    -- Build a fake list from nearby objects for quick testing
+    local ped    = PlayerPedId()
+    local origin = GetEntityCoords(ped)
+    local propList = {}
+    local groups = { 'Street Furniture', 'Vehicles', 'Nature' }
+
+    local nearby = GetGamePool('CObject')
+    local count  = 0
+    for _, obj in ipairs(nearby) do
+        if #(GetEntityCoords(obj) - origin) < 30.0 then
+            local pos = GetEntityCoords(obj)
+            count = count + 1
+            propList[#propList + 1] = {
+                id       = tostring(obj),
+                handle   = obj,
+                model    = tostring(GetEntityModel(obj)),
+                position = { x = pos.x, y = pos.y, z = pos.z },
+                group    = groups[(count % #groups) + 1],
+                outlined = false,
+            }
+            if count >= 20 then break end
+        end
+    end
+
+    common.OpenPropManager(propList)
+end, false)
+
+-- ─── Permissions NUI Callbacks ───────────────────────────────────────────────
+
+RegisterNUICallback('AddPermission', function(data, cb)
+    -- Forward to server for persistence; stub for client-side acknowledgement
+    TriggerServerEvent('ar_propmanager2:addPermission', data)
+    cb('ok')
+end)
+
+RegisterNUICallback('UpdatePermission', function(data, cb)
+    TriggerServerEvent('ar_propmanager2:updatePermission', data)
+    cb('ok')
+end)
+
+RegisterNUICallback('DeletePermission', function(data, cb)
+    TriggerServerEvent('ar_propmanager2:deletePermission', data.id)
+    cb('ok')
+end)
+
+RegisterNUICallback('GetPlayerPosition', function(_, cb)
+    local pos = GetEntityCoords(PlayerPedId())
+    cb({ x = pos.x, y = pos.y, z = pos.z })
+end)
+
+--- Open the permissions manager window.
+--- @param permissionList table  Array of { id, identifier, name, group, area }
+--- @param groups         table  Array of group name strings
+function common.OpenPermissions(permissionList, groups)
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        action = 'openPermissions',
+        data   = { permissions = permissionList, groups = groups }
+    })
+end
+
+function common.ClosePermissions()
+    SetNuiFocus(false, false)
+    SendNUIMessage({ action = 'closePermissions', data = {} })
+end
+
+RegisterCommand('test_permissions', function()
+    local groups = { 'Street Furniture', 'Nature', 'Vehicles' }
+    local permissions = {
+        {
+            id         = 'perm_1',
+            identifier = 'license:a1b2c3d4e5f6a1b2c3d4e5f6',
+            name       = 'John Doe',
+            group      = 'Street Furniture',
+            area       = nil,
+        },
+        {
+            id         = 'perm_2',
+            identifier = 'license:f6e5d4c3b2a1f6e5d4c3b2a1',
+            name       = 'Jane Smith',
+            group      = 'Nature',
+            area       = {
+                center = { x = 215.4, y = -810.2, z = 29.7 },
+                radius = 100,
+            },
+        },
+    }
+    common.OpenPermissions(permissions, groups)
+end, false)
+
+-- ─── Exports ──────────────────────────────────────────────────────────────────
 
 exports('OpenGizmo', function(entity, options)
     common.OpenGizmo(entity, options)
+end)
+
+exports('OpenPropManager', function(propList)
+    common.OpenPropManager(propList)
 end)

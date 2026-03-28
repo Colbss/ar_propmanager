@@ -11,7 +11,7 @@ export interface PropEntry {
   outlined: boolean
 }
 
-export const usePropManagerStore = defineStore('propManager', () => {
+export const usePropListStore = defineStore('propList', () => {
   const isVisible = ref(false)
   const props = ref<PropEntry[]>([])
 

@@ -3,10 +3,10 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import * as THREE from 'three'
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js'
 import { useNuiEvent } from '../composables/useNuiEvent'
-import { usePMStore } from '../stores/propmanager.store'
+import { useGizmoStore } from '../stores/gizmo.store'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-const pmStore = usePMStore()
+const pmStore = useGizmoStore()
 
 let renderer: THREE.WebGLRenderer | null = null
 let camera: THREE.PerspectiveCamera

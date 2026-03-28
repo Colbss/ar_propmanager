@@ -2,9 +2,9 @@
 import ThreeScene from './ThreeScene.vue'
 import GizmoOverlay from './GizmoOverlay.vue'
 import { useNuiEvent } from '../composables/useNuiEvent'
-import { usePMStore } from '../stores/propmanager.store'
+import { useGizmoStore } from '../stores/gizmo.store'
 
-const pmStore = usePMStore()
+const pmStore = useGizmoStore()
 
 useNuiEvent('show', () => {
   pmStore.isVisible = true
