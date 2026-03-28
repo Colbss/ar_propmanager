@@ -116,7 +116,7 @@ keybinds.mode = lib.addKeybind({
     description = string.format('~b~%s~w~', locale('keybind_mode')),
     defaultKey = 'R',
     onPressed = function(self)
-        -- Do something
+        SendNUIMessage({ action = 'toggleMode', data = {} })
     end
 })
 keybinds.mode:disable(true)
@@ -126,7 +126,7 @@ keybinds.focus = lib.addKeybind({
     description = string.format('~b~%s~w~', locale('keybind_focus')),
     defaultKey = 'F',
     onPressed = function(self)
-        -- Do something
+        -- Focus camera handled server-side or via cam natives if needed
     end
 })
 keybinds.focus:disable(true)
@@ -136,7 +136,7 @@ keybinds.finish = lib.addKeybind({
     description = string.format('~b~%s~w~', locale('keybind_finish')),
     defaultKey = 'E',
     onPressed = function(self)
-        -- Do something
+        if common.CloseGizmo then common.CloseGizmo(true) end
     end
 })
 keybinds.finish:disable(true)
@@ -146,7 +146,7 @@ keybinds.cancel = lib.addKeybind({
     description = string.format('~b~%s~w~', locale('keybind_cancel')),
     defaultKey = 'Back',
     onPressed = function(self)
-        -- Do something
+        if common.CloseGizmo then common.CloseGizmo(false) end
     end
 })
 keybinds.cancel:disable(true)
