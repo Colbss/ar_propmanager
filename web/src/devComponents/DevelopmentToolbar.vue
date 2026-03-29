@@ -46,6 +46,13 @@ const testPropManager = () => {
     'prop_bench_01a', 'prop_tree_pine_01a', 'prop_streetlight_01',
     'prop_barrier_01a', 'prop_bin_01a', 'prop_bollard_01',
   ]
+  const now = Math.floor(Date.now() / 1000)
+  const mockExpiries = [
+    null,
+    now + 3600,   // expires in 1 hour
+    now + 86400,  // expires in 24 hours
+    now - 60,     // already expired
+  ]
   const props = Array.from({ length: 12 }, (_, i) => ({
     id: `prop_${i}`,
     handle: i + 1,
@@ -53,6 +60,8 @@ const testPropManager = () => {
     position: { x: +(100 + i * 3.7).toFixed(1), y: +(200 + i * 1.2).toFixed(1), z: +(28 + (i % 4) * 0.5).toFixed(1) },
     group: mockGroups[i % mockGroups.length],
     outlined: false,
+    renderDistance: 200,
+    expiresAt: mockExpiries[i % mockExpiries.length],
   }))
   const groupStates: Record<string, boolean> = {
     'Street Furniture': true,

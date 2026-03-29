@@ -165,12 +165,14 @@ RegisterNUICallback('Finish', function(_, cb)
         local opts            = currentGizmoOptions or {}
 
         TriggerServerEvent('ar_propmanager2:saveProp', {
-            id         = opts.dbId,
-            netId      = NetworkGetNetworkIdFromEntity(currentGizmoEntity),
-            model      = opts.model or tostring(GetEntityModel(currentGizmoEntity)),
-            position   = { x = pos.x, y = pos.y, z = pos.z },
-            quaternion = { x = qx, y = qy, z = qz, w = qw },
-            group      = opts.group or 'default',
+            id             = opts.dbId,
+            netId          = NetworkGetNetworkIdFromEntity(currentGizmoEntity),
+            model          = opts.model or tostring(GetEntityModel(currentGizmoEntity)),
+            position       = { x = pos.x, y = pos.y, z = pos.z },
+            quaternion     = { x = qx, y = qy, z = qz, w = qw },
+            group          = opts.group or 'default',
+            renderDistance = opts.renderDistance or 200,
+            expiresAt      = opts.expiresAt,
         })
     end
     common.CloseGizmo(true)
@@ -209,6 +211,58 @@ RegisterCommand('test_gizmo', function(source, args, rawCommand)
     SetModelAsNoLongerNeeded(modelHash)
     common.OpenGizmo(prop)
 end, false)
+
+-- ─── Add Prop NUI Callbacks ───────────────────────────────────────────────────
+
+RegisterNUICallback('GetPropList', function(_, cb)
+    local propList = require 'config/props'
+    cb(propList)
+end)
+
+RegisterNUICallback('PlaceProp', function(data, cb)
+    local model = data.model
+    if not model or model == '' then cb('error') return end
+
+    local modelHash = GetHashKey(model)
+
+    -- Validate model by attempting to load it
+    RequestModel(modelHash)
+    local timeout = 0
+    while not HasModelLoaded(modelHash) and timeout < 100 do
+        Wait(10)
+        timeout = timeout + 1
+    end
+
+    if not HasModelLoaded(modelHash) then
+        SetModelAsNoLongerNeeded(modelHash)
+        cb({ error = 'invalid_model' })
+        return
+    end
+
+    local ped     = PlayerPedId()
+    local pos     = GetEntityCoords(ped)
+    local heading = GetEntityHeading(ped)
+
+    local prop = CreateObject(
+        modelHash,
+        pos.x + math.sin(math.rad(-heading)) * 3.0,
+        pos.y + math.cos(math.rad(-heading)) * 3.0,
+        pos.z,
+        true, true, false
+    )
+
+    SetModelAsNoLongerNeeded(modelHash)
+
+    common.OpenGizmo(prop, {
+        model          = model,
+        group          = data.group or 'default',
+        renderDistance = data.renderDistance or 200,
+        expiresAt      = data.expiresAt,
+        attachingProp  = true,
+    })
+
+    cb('ok')
+end)
 
 -- ─── Prop Manager NUI Callbacks ──────────────────────────────────────────────
 
@@ -266,6 +320,15 @@ RegisterCommand('test_prop_manager', function()
     local propList = {}
     local mockGroups = { 'Street Furniture', 'Vehicles', 'Nature' }
 
+    local now = os.time()
+    -- Expiry patterns cycled across props: none, future (+1 h), future (+24 h), already expired
+    local mockExpiries = {
+        nil,
+        now + 3600,       -- expires in 1 hour
+        now + 86400,      -- expires in 24 hours
+        now - 60,         -- already expired (1 min ago)
+    }
+
     local nearby = GetGamePool('CObject')
     local count  = 0
     for _, obj in ipairs(nearby) do
@@ -273,12 +336,14 @@ RegisterCommand('test_prop_manager', function()
             local pos = GetEntityCoords(obj)
             count = count + 1
             propList[#propList + 1] = {
-                id       = tostring(obj),
-                handle   = obj,
-                model    = tostring(GetEntityModel(obj)),
-                position = { x = pos.x, y = pos.y, z = pos.z },
-                group    = mockGroups[(count % #mockGroups) + 1],
-                outlined = false,
+                id             = tostring(obj),
+                handle         = obj,
+                model          = tostring(GetEntityModel(obj)),
+                position       = { x = pos.x, y = pos.y, z = pos.z },
+                group          = mockGroups[(count % #mockGroups) + 1],
+                outlined       = false,
+                renderDistance = 200,
+                expiresAt      = mockExpiries[(count % #mockExpiries) + 1],
             }
             if count >= 20 then break end
         end

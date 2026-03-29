@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { usePropManagerStore } from '../stores/propmanager.store'
+import { useAddPropStore } from '../stores/addprop.store'
 
 const store = usePropManagerStore()
+const addPropStore = useAddPropStore()
 
 // ─── Group collapse state ─────────────────────────────────────────────────────
 
@@ -20,6 +22,16 @@ type PropPosition = { x: number; y: number; z: number }
 
 const fmtPos = (p: PropPosition) =>
   `${p.x.toFixed(1)},  ${p.y.toFixed(1)},  ${p.z.toFixed(1)}`
+
+const fmtExpiry = (epoch: number) => {
+  const d = new Date(epoch * 1000)
+  const dd   = String(d.getDate()).padStart(2, '0')
+  const mm   = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  const hh   = String(d.getHours()).padStart(2, '0')
+  const min  = String(d.getMinutes()).padStart(2, '0')
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`
+}
 
 const pendingDelete = ref<string | null>(null)
 
@@ -41,6 +53,17 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
 
 <template>
   <div class="flex flex-col" @mousedown="cancelDelete">
+    <!-- Toolbar -->
+    <div class="flex items-center justify-end border-b border-white/10 px-3 py-1.5">
+      <button
+        class="flex items-center gap-1.5 rounded bg-blue-600/70 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-blue-500/80"
+        @click.stop="addPropStore.isVisible = true"
+      >
+        <i class="pi pi-plus text-[10px]" />
+        Add Prop
+      </button>
+    </div>
+
     <!-- Prop list -->
     <div class="max-h-[480px] overflow-y-auto">
       <div v-if="store.groups.size === 0" class="py-8 text-center text-xs text-slate-500">
@@ -109,6 +132,18 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
             <!-- Position -->
             <span class="flex-1 truncate font-mono text-[11px] text-slate-500" :title="fmtPos(prop.position)">
               {{ fmtPos(prop.position) }}
+            </span>
+
+            <!-- Expiry -->
+            <span
+              v-if="prop.expiresAt"
+              class="shrink-0 rounded px-1.5 py-0.5 text-[10px]"
+              :class="prop.expiresAt * 1000 < Date.now()
+                ? 'bg-red-500/20 text-red-400'
+                : 'bg-amber-500/15 text-amber-400'"
+              :title="'Expires: ' + fmtExpiry(prop.expiresAt)"
+            >
+              <i class="pi pi-clock mr-0.5 text-[9px]" />{{ fmtExpiry(prop.expiresAt) }}
             </span>
 
             <!-- Actions -->

@@ -29,6 +29,7 @@ ui_page 'web/dist/index.html'
 
 files {
     'config.lua',
+    'config/props.lua',
     'locales/*.json',
 
 	'web/dist/index.html',

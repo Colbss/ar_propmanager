@@ -125,12 +125,21 @@ local function createTables()
             `quat_y`     FLOAT       NOT NULL DEFAULT 0,
             `quat_z`     FLOAT       NOT NULL DEFAULT 0,
             `quat_w`     FLOAT       NOT NULL DEFAULT 1,
-            `group_name` VARCHAR(64) NOT NULL,
-            `placed_by`  VARCHAR(64) NOT NULL,
-            `placed_at`  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `group_name`      VARCHAR(64) NOT NULL,
+            `placed_by`       VARCHAR(64) NOT NULL,
+            `placed_at`       TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `render_distance` FLOAT       NOT NULL DEFAULT 200,
+            `expires_at`      BIGINT      NULL,
             PRIMARY KEY (`id`),
             INDEX `idx_group` (`group_name`)
         )
+    ]])
+
+    -- Migration: add render_distance / expires_at to existing installs
+    MySQL.query([[
+        ALTER TABLE `ar_props`
+            ADD COLUMN IF NOT EXISTS `render_distance` FLOAT     NOT NULL DEFAULT 200,
+            ADD COLUMN IF NOT EXISTS `expires_at`      BIGINT    NULL
     ]])
 
     MySQL.query([[
@@ -199,13 +208,15 @@ local function buildPropList()
     for groupName, group in pairs(groups) do
         for dbId, prop in pairs(group.props) do
             list[#list + 1] = {
-                id       = dbId,
-                netId    = prop.netId,
-                handle   = prop.netId,
-                model    = prop.model,
-                position = prop.position,
-                group    = groupName,
-                outlined = false,
+                id             = dbId,
+                netId          = prop.netId,
+                handle         = prop.netId,
+                model          = prop.model,
+                position       = prop.position,
+                group          = groupName,
+                outlined       = false,
+                renderDistance = prop.renderDistance or 200,
+                expiresAt      = prop.expiresAt,
             }
         end
     end
@@ -234,11 +245,13 @@ local function loadData()
     for _, row in ipairs(propRows or {}) do
         local group    = getOrCreateGroup(row.group_name)
         local propData = {
-            model    = row.model,
-            position = { x = row.pos_x, y = row.pos_y, z = row.pos_z },
-            quat     = { x = row.quat_x, y = row.quat_y, z = row.quat_z, w = row.quat_w },
-            entity   = nil,
-            netId    = nil,
+            model          = row.model,
+            position       = { x = row.pos_x, y = row.pos_y, z = row.pos_z },
+            quat           = { x = row.quat_x, y = row.quat_y, z = row.quat_z, w = row.quat_w },
+            renderDistance = row.render_distance or 200,
+            expiresAt      = row.expires_at,
+            entity         = nil,
+            netId          = nil,
         }
 
         if group.enabled then
@@ -331,8 +344,10 @@ RegisterNetEvent('ar_propmanager2:saveProp', function(data)
         local propData = group.props[data.id]
         if not propData then return end
 
-        propData.position = pos
-        propData.quat     = quat
+        propData.position       = pos
+        propData.quat           = quat
+        propData.renderDistance = data.renderDistance or propData.renderDistance or 200
+        propData.expiresAt      = data.expiresAt
 
         if propData.entity and DoesEntityExist(propData.entity) then
             SetEntityCoords(propData.entity, pos.x, pos.y, pos.z, false, false, false, false)
@@ -340,8 +355,8 @@ RegisterNetEvent('ar_propmanager2:saveProp', function(data)
         end
 
         MySQL.query(
-            'UPDATE `ar_props` SET pos_x=?,pos_y=?,pos_z=?,quat_x=?,quat_y=?,quat_z=?,quat_w=? WHERE id=?',
-            { pos.x, pos.y, pos.z, quat.x, quat.y, quat.z, quat.w, data.id }
+            'UPDATE `ar_props` SET pos_x=?,pos_y=?,pos_z=?,quat_x=?,quat_y=?,quat_z=?,quat_w=?,render_distance=?,expires_at=? WHERE id=?',
+            { pos.x, pos.y, pos.z, quat.x, quat.y, quat.z, quat.w, propData.renderDistance, propData.expiresAt, data.id }
         )
     else
         -- ── New prop ──────────────────────────────────────────────────────────
@@ -350,11 +365,13 @@ RegisterNetEvent('ar_propmanager2:saveProp', function(data)
         local group      = getOrCreateGroup(data.group)
 
         local propData = {
-            model    = data.model,
-            position = pos,
-            quat     = quat,
-            entity   = nil,
-            netId    = nil,
+            model          = data.model,
+            position       = pos,
+            quat           = quat,
+            renderDistance = data.renderDistance or 200,
+            expiresAt      = data.expiresAt,
+            entity         = nil,
+            netId          = nil,
         }
 
         if data.netId then
@@ -383,8 +400,8 @@ RegisterNetEvent('ar_propmanager2:saveProp', function(data)
             { data.group }
         )
         MySQL.query(
-            'INSERT INTO `ar_props` (id,model,pos_x,pos_y,pos_z,quat_x,quat_y,quat_z,quat_w,group_name,placed_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-            { id, data.model, pos.x, pos.y, pos.z, quat.x, quat.y, quat.z, quat.w, data.group, identifier }
+            'INSERT INTO `ar_props` (id,model,pos_x,pos_y,pos_z,quat_x,quat_y,quat_z,quat_w,group_name,placed_by,render_distance,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            { id, data.model, pos.x, pos.y, pos.z, quat.x, quat.y, quat.z, quat.w, data.group, identifier, propData.renderDistance, propData.expiresAt }
         )
     end
 
@@ -417,6 +434,40 @@ RegisterNetEvent('ar_propmanager2:deleteProp', function(data)
 
     broadcastSync()
 end)
+
+-- ─── Expiry cron ─────────────────────────────────────────────────────────────
+
+local function checkExpiredProps()
+    local now = os.time()
+    local expired = {}
+
+    for groupName, group in pairs(groups) do
+        for dbId, prop in pairs(group.props) do
+            if prop.expiresAt and now >= prop.expiresAt then
+                expired[#expired + 1] = { groupName = groupName, dbId = dbId, prop = prop }
+            end
+        end
+    end
+
+    if #expired == 0 then return end
+
+    for _, entry in ipairs(expired) do
+        despawnProp(entry.prop)
+        groups[entry.groupName].props[entry.dbId] = nil
+        print(('[ar_propmanager2] Expired prop removed — id: %s, model: %s, group: %s')
+            :format(entry.dbId, entry.prop.model, entry.groupName))
+    end
+
+    -- Batch delete from DB
+    local ids = {}
+    for _, entry in ipairs(expired) do ids[#ids + 1] = entry.dbId end
+    local placeholders = string.rep('?,', #ids):sub(1, -2)
+    MySQL.query('DELETE FROM `ar_props` WHERE id IN (' .. placeholders .. ')', ids)
+
+    broadcastSync()
+end
+
+lib.cron.new(config.expiryCron, checkExpiredProps)
 
 -- ─── Player access events ─────────────────────────────────────────────────────
 
@@ -510,13 +561,15 @@ lib.callback.register('ar_propmanager2:getProps', function(source)
             stateSubset[gName] = group.enabled
             for dbId, prop in pairs(group.props) do
                 propList[#propList + 1] = {
-                    id       = dbId,
-                    netId    = prop.netId,
-                    handle   = prop.netId,
-                    model    = prop.model,
-                    position = prop.position,
-                    group    = gName,
-                    outlined = false,
+                    id             = dbId,
+                    netId          = prop.netId,
+                    handle         = prop.netId,
+                    model          = prop.model,
+                    position       = prop.position,
+                    group          = gName,
+                    outlined       = false,
+                    renderDistance = prop.renderDistance or 200,
+                    expiresAt      = prop.expiresAt,
                 }
             end
         end

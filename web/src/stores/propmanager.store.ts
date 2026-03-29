@@ -10,6 +10,8 @@ export interface PropEntry {
   position: { x: number; y: number; z: number }
   group: string
   outlined: boolean
+  renderDistance?: number
+  expiresAt?: number | null
 }
 
 export const usePropManagerStore = defineStore('propManager', () => {

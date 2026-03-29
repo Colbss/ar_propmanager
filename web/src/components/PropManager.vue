@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import PropManagerWindow from './PropManagerWindow.vue'
+import AddPropWindow from './AddPropWindow.vue'
 import { useNuiEvent } from '../composables/useNuiEvent'
 import { usePropManagerStore, type PropEntry } from '../stores/propmanager.store'
 import { usePlayerAccessStore, type PlayerAccessEntry } from '../stores/playeraccess.store'
+import { useAddPropStore } from '../stores/addprop.store'
 
 const propStore = usePropManagerStore()
 const accessStore = usePlayerAccessStore()
+const addPropStore = useAddPropStore()
 
 const windowVisible = ref(false)
 const activeTab = ref<'props' | 'permissions' | 'map'>('props')
@@ -61,4 +64,5 @@ useNuiEvent('closePermissions', () => {
     v-model:activeTab="activeTab"
     @close="windowVisible = false"
   />
+  <AddPropWindow v-if="addPropStore.isVisible" />
 </template>
