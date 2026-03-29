@@ -84,6 +84,9 @@ async function initMap() {
   // Deselect when clicking empty map
   map.on('click', clearSelection)
 
+  // Clear cluster list after zoom — the cluster composition changes so the list is stale
+  map.on('zoomend', () => { selectedCluster.value = [] })
+
   buildLayers()
 }
 
@@ -105,8 +108,13 @@ function buildClusterLayer() {
     iconCreateFunction: (cluster: any) => {
       const n = cluster.getChildCount()
       const size = n >= 100 ? 40 : n >= 10 ? 34 : 28
+      const childIds = new Set(
+        cluster.getAllChildMarkers().map((m: any) => m._prop?.id).filter(Boolean)
+      )
+      const isSelected = selectedCluster.value.length > 0 &&
+        selectedCluster.value.some((p) => childIds.has(p.id))
       return L.divIcon({
-        html: `<div class="pm-cluster" style="width:${size}px;height:${size}px">${n}</div>`,
+        html: `<div class="pm-cluster${isSelected ? ' pm-cluster-selected' : ''}" style="width:${size}px;height:${size}px">${n}</div>`,
         className: '',
         iconSize: L.point(size, size),
         iconAnchor: L.point(size / 2, size / 2),
@@ -135,17 +143,18 @@ function buildClusterLayer() {
     const isSelected = selected.value?.id === prop.id
 
     const marker = L.circleMarker([lat, lng], {
-      radius: isSelected ? 8 : 5,
-      color: prop.outlined ? '#f59e0b' : isSelected ? '#a78bfa' : '#3b82f6',
-      fillColor: prop.outlined ? '#fcd34d' : isSelected ? '#c4b5fd' : '#60a5fa',
+      radius: isSelected ? 10 : 5,
+      color: prop.outlined ? '#f59e0b' : isSelected ? '#e879f9' : '#3b82f6',
+      fillColor: prop.outlined ? '#fcd34d' : isSelected ? '#d946ef' : '#60a5fa',
       fillOpacity: 1,
-      weight: isSelected ? 3 : 2,
+      weight: isSelected ? 3 : 1.5,
+      className: isSelected ? 'pm-selected-marker' : '',
     })
 
     ;(marker as any)._prop = prop
 
     marker.bindTooltip(
-      `<span style="font-size:0.75rem;color:#cbd5e1">${prop.model}</span><br><span style="font-size:0.7rem;color:#64748b">${prop.group}</span>`,
+      `<span style="font-size:0.75rem">${prop.model}</span><br><span style="font-size:0.7rem;color:#94a3b8">${prop.group}</span>`,
       { direction: 'top', offset: L.point(0, -8) }
     )
 
@@ -192,6 +201,7 @@ function buildLayers() {
 
 watch(() => store.props, () => { if (map) buildLayers() }, { deep: true })
 watch(mode, () => { if (map) buildLayers() })
+watch([selected, selectedCluster], () => { if (map && mode.value === 'clusters') buildLayers() })
 
 watch(
   () => mapContainer.value,
@@ -265,52 +275,45 @@ const deleteFromCluster = (prop: PropEntry) => {
     </div>
 
     <!-- Map -->
-    <div ref="mapContainer" class="h-[40vh] w-full" />
+    <div ref="mapContainer" class="h-[43vh] w-full" />
 
     <!-- Selection panel -->
     <div class="border-t border-white/10">
-      <!-- Single prop selected -->
-      <template v-if="selected && mode === 'clusters'">
-        <div class="flex items-center gap-2 px-4 py-2.5 text-xs">
-          <div class="flex min-w-0 flex-1 items-center gap-2">
-            <span class="truncate font-mono text-slate-200">{{ selected.model }}</span>
-            <span class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-xs text-slate-300">{{ selected.group }}</span>
-            <span class="shrink-0 font-mono text-xs text-slate-500">
-              {{ selected.position.x.toFixed(1) }}, {{ selected.position.y.toFixed(1) }}, {{ selected.position.z.toFixed(1) }}
+
+      <!-- Cluster header (only shown when multiple props selected) -->
+      <div
+        v-if="selectedCluster.length > 0 && mode === 'clusters'"
+        class="flex items-center justify-between border-b border-white/5 px-4 py-1.5"
+      >
+        <span class="text-xs text-slate-400">{{ selectedCluster.length }} props at this location</span>
+        <button class="text-xs text-slate-600 transition hover:text-slate-400" @click="clearSelection">✕</button>
+      </div>
+
+      <!-- Prop rows — single selected prop or cluster list, same layout -->
+      <div
+        v-if="(selected || selectedCluster.length > 0) && mode === 'clusters'"
+        class="max-h-[15vh] overflow-y-auto"
+      >
+        <div
+          v-for="prop in selected ? [selected] : selectedCluster"
+          :key="prop.id"
+          class="flex items-center gap-2 border-b border-white/5 px-4 py-2 text-xs last:border-0"
+        >
+          <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span class="truncate font-mono text-slate-200">{{ prop.model }}</span>
+            <span class="font-mono text-[0.7rem] text-slate-500">
+              {{ prop.position.x.toFixed(1) }}, {{ prop.position.y.toFixed(1) }}, {{ prop.position.z.toFixed(1) }}
             </span>
           </div>
+          <span class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-[0.7rem] text-slate-400">{{ prop.group }}</span>
           <button
-            class="flex shrink-0 items-center gap-1 rounded bg-red-600/30 px-2.5 py-1 text-xs text-red-300 transition hover:bg-red-600/50"
-            @click="deleteSelected"
+            class="flex shrink-0 items-center gap-1 rounded bg-red-600/20 px-2.5 py-1 text-xs text-red-400 transition hover:bg-red-600/40 hover:text-red-300"
+            @click="selected ? deleteSelected() : deleteFromCluster(prop)"
           >
             <i class="pi pi-trash text-[0.7rem]" /> Delete
           </button>
         </div>
-      </template>
-
-      <!-- Cluster list (max zoom) -->
-      <template v-else-if="selectedCluster.length > 0 && mode === 'clusters'">
-        <div class="flex items-center justify-between border-b border-white/5 px-4 py-1.5">
-          <span class="text-xs text-slate-400">{{ selectedCluster.length }} props at this location</span>
-          <button class="text-xs text-slate-600 hover:text-slate-400 transition" @click="clearSelection">✕</button>
-        </div>
-        <div class="max-h-[15vh] overflow-y-auto">
-          <div
-            v-for="prop in selectedCluster"
-            :key="prop.id"
-            class="flex items-center gap-2 border-b border-white/5 px-4 py-1.5 text-xs last:border-0"
-          >
-            <span class="min-w-0 flex-1 truncate font-mono text-slate-300">{{ prop.model }}</span>
-            <span class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-xs text-slate-400">{{ prop.group }}</span>
-            <button
-              class="flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-xs text-red-400/70 transition hover:bg-red-600/20 hover:text-red-300"
-              @click="deleteFromCluster(prop)"
-            >
-              <i class="pi pi-trash text-[0.7rem]" />
-            </button>
-          </div>
-        </div>
-      </template>
+      </div>
 
       <!-- Empty hint -->
       <div v-else class="flex h-[38px] items-center px-4">
@@ -323,7 +326,8 @@ const deleteFromCluster = (prop: PropEntry) => {
 </template>
 
 <style>
-/* Cluster marker icon — dark themed */
+/* ── Cluster marker icons ──────────────────────────────────────────────────── */
+
 .pm-cluster {
   background: rgba(59, 130, 246, 0.85);
   border: 2px solid rgba(147, 197, 253, 0.7);
@@ -331,13 +335,42 @@ const deleteFromCluster = (prop: PropEntry) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #fff;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
-/* Override leaflet.markercluster default styles */
+.pm-cluster-selected {
+  background: rgba(217, 70, 239, 0.9);
+  border-color: rgba(240, 171, 252, 0.85);
+  box-shadow: 0 0 0 3px rgba(217, 70, 239, 0.3), 0 0 0 6px rgba(217, 70, 239, 0.12);
+}
+
+/* ── Selected single marker glow ──────────────────────────────────────────── */
+
+.pm-selected-marker {
+  filter: drop-shadow(0 0 5px rgba(217, 70, 239, 0.9));
+}
+
+/* ── Leaflet tooltip — dark theme ─────────────────────────────────────────── */
+
+.leaflet-tooltip {
+  background: rgba(10, 16, 28, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+  padding: 5px 10px !important;
+  text-align: center;
+  color: #cbd5e1 !important;
+}
+
+.leaflet-tooltip::before {
+  border-top-color: rgba(10, 16, 28, 0.95) !important;
+}
+
+/* ── Markercluster animation ──────────────────────────────────────────────── */
+
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow {
   transition: transform 0.3s ease-out, opacity 0.3s ease-in;
