@@ -56,6 +56,22 @@ end
 -- player access list (ar_player_access table).
 -- Players with the `manage` ace bypass this check entirely.
 
+--- 2-D point-in-polygon via ray-casting (ignores Z).
+local function pointInZone(px, py, points)
+    if not points or #points < 3 then return false end
+    local inside = false
+    local j = #points
+    for i = 1, #points do
+        local xi, yi = points[i].x, points[i].y
+        local xj, yj = points[j].x, points[j].y
+        if ((yi > py) ~= (yj > py)) and (px < (xj - xi) * (py - yi) / (yj - yi) + xi) then
+            inside = not inside
+        end
+        j = i
+    end
+    return inside
+end
+
 local function hasPlayerAccess(source, group, position)
     if canManage(source) then return true end
 
@@ -69,8 +85,21 @@ local function hasPlayerAccess(source, group, position)
     if not rows or #rows == 0 then return false end
 
     for _, row in ipairs(rows) do
-        if row.area_x == nil then return true end
-        if position then
+        -- No area restriction → access granted
+        if row.area_x == nil and (row.area_type == nil or row.zone_points == nil) then
+            return true
+        end
+
+        if not position then return true end
+
+        local areaType = row.area_type or 'radius'
+
+        if areaType == 'zone' and row.zone_points then
+            local ok, pts = pcall(json.decode, row.zone_points)
+            if ok and pointInZone(position.x, position.y, pts) then
+                return true
+            end
+        elseif areaType == 'radius' and row.area_x ~= nil then
             local dx = position.x - row.area_x
             local dy = position.y - row.area_y
             local dz = position.z - row.area_z
@@ -114,17 +143,26 @@ local function createTables()
 
     MySQL.query([[
         CREATE TABLE IF NOT EXISTS `ar_player_access` (
-            `id`          VARCHAR(36) NOT NULL,
-            `identifier`  VARCHAR(64) NOT NULL,
-            `name`        VARCHAR(64) NOT NULL,
-            `group_name`  VARCHAR(64) NOT NULL,
-            `area_x`      FLOAT       NULL,
-            `area_y`      FLOAT       NULL,
-            `area_z`      FLOAT       NULL,
-            `area_radius` FLOAT       NULL,
+            `id`          VARCHAR(36)              NOT NULL,
+            `identifier`  VARCHAR(64)              NOT NULL,
+            `name`        VARCHAR(64)              NOT NULL,
+            `group_name`  VARCHAR(64)              NOT NULL,
+            `area_type`   ENUM('radius','zone')    NULL DEFAULT NULL,
+            `area_x`      FLOAT                   NULL,
+            `area_y`      FLOAT                   NULL,
+            `area_z`      FLOAT                   NULL,
+            `area_radius` FLOAT                   NULL,
+            `zone_points` JSON                    NULL,
             PRIMARY KEY (`id`),
             INDEX `idx_identifier` (`identifier`)
         )
+    ]])
+
+    -- Migration: add area_type / zone_points to existing installs
+    MySQL.query([[
+        ALTER TABLE `ar_player_access`
+            ADD COLUMN IF NOT EXISTS `area_type`   ENUM('radius','zone') NULL DEFAULT NULL,
+            ADD COLUMN IF NOT EXISTS `zone_points` JSON                  NULL
     ]])
 end
 
@@ -382,22 +420,31 @@ end)
 
 -- ─── Player access events ─────────────────────────────────────────────────────
 
+--- Builds the flat DB column values from the area object sent by the UI.
+--- Returns: areaType, ax, ay, az, aRadius, zoneJson
+local function decomposeArea(area)
+    if not area then
+        return nil, nil, nil, nil, nil, nil
+    end
+    if area.type == 'zone' then
+        local zoneJson = area.points and json.encode(area.points) or nil
+        return 'zone', nil, nil, nil, nil, zoneJson
+    end
+    -- radius (default)
+    local c = area.center or {}
+    return 'radius', c.x, c.y, c.z, area.radius, nil
+end
+
 --- data: { identifier, name, group, area? }
 RegisterNetEvent('ar_propmanager2:addPlayerAccess', function(data)
     if not canManagePlayerAccess(source) then return end
 
-    local id   = uuid()
-    local area = data.area
+    local id = uuid()
+    local areaType, ax, ay, az, aRadius, zoneJson = decomposeArea(data.area)
 
     MySQL.query(
-        'INSERT INTO `ar_player_access` (id,identifier,name,group_name,area_x,area_y,area_z,area_radius) VALUES (?,?,?,?,?,?,?,?)',
-        {
-            id, data.identifier, data.name, data.group,
-            area and area.center.x or nil,
-            area and area.center.y or nil,
-            area and area.center.z or nil,
-            area and area.radius   or nil,
-        }
+        'INSERT INTO `ar_player_access` (id,identifier,name,group_name,area_type,area_x,area_y,area_z,area_radius,zone_points) VALUES (?,?,?,?,?,?,?,?,?,?)',
+        { id, data.identifier, data.name, data.group, areaType, ax, ay, az, aRadius, zoneJson }
     )
 
     -- Return confirmed record so UI can swap the optimistic temp id
@@ -414,17 +461,10 @@ end)
 RegisterNetEvent('ar_propmanager2:updatePlayerAccess', function(data)
     if not canManagePlayerAccess(source) then return end
 
-    local area = data.area
+    local areaType, ax, ay, az, aRadius, zoneJson = decomposeArea(data.area)
     MySQL.query(
-        'UPDATE `ar_player_access` SET identifier=?,name=?,group_name=?,area_x=?,area_y=?,area_z=?,area_radius=? WHERE id=?',
-        {
-            data.identifier, data.name, data.group,
-            area and area.center.x or nil,
-            area and area.center.y or nil,
-            area and area.center.z or nil,
-            area and area.radius   or nil,
-            data.id,
-        }
+        'UPDATE `ar_player_access` SET identifier=?,name=?,group_name=?,area_type=?,area_x=?,area_y=?,area_z=?,area_radius=?,zone_points=? WHERE id=?',
+        { data.identifier, data.name, data.group, areaType, ax, ay, az, aRadius, zoneJson, data.id }
     )
 end)
 
@@ -485,6 +525,22 @@ lib.callback.register('ar_propmanager2:getProps', function(source)
     return { props = propList, groupStates = stateSubset }
 end)
 
+--- Converts a DB row's area columns into the AreaRestriction shape expected by the UI.
+local function rowToArea(row)
+    local areaType = row.area_type
+    if areaType == 'zone' and row.zone_points then
+        local ok, pts = pcall(json.decode, row.zone_points)
+        if ok then return { type = 'zone', points = pts } end
+    elseif areaType == 'radius' and row.area_x ~= nil then
+        return {
+            type   = 'radius',
+            center = { x = row.area_x, y = row.area_y, z = row.area_z },
+            radius = row.area_radius,
+        }
+    end
+    return nil
+end
+
 --- Returns all player access entries. Requires playerAccess ace.
 lib.callback.register('ar_propmanager2:getPlayerAccess', function(source)
     if not canManagePlayerAccess(source) then return nil end
@@ -497,10 +553,7 @@ lib.callback.register('ar_propmanager2:getPlayerAccess', function(source)
             identifier = row.identifier,
             name       = row.name,
             group      = row.group_name,
-            area       = row.area_x and {
-                center = { x = row.area_x, y = row.area_y, z = row.area_z },
-                radius = row.area_radius,
-            } or nil,
+            area       = rowToArea(row),
         }
     end
     return result
@@ -528,10 +581,7 @@ exports('OpenPlayerAccessForPlayer', function(playerId, groupList)
             identifier = row.identifier,
             name       = row.name,
             group      = row.group_name,
-            area       = row.area_x and {
-                center = { x = row.area_x, y = row.area_y, z = row.area_z },
-                radius = row.area_radius,
-            } or nil,
+            area       = rowToArea(row),
         }
     end
     TriggerClientEvent('ar_propmanager2:openPlayerAccessFromServer', playerId, result, groupList or {})

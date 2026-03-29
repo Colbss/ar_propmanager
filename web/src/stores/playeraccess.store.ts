@@ -2,10 +2,18 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useApi } from '../composables/useApi'
 
-export interface AreaRestriction {
+export interface RadiusArea {
+  type: 'radius'
   center: { x: number; y: number; z: number }
   radius: number
 }
+
+export interface ZoneArea {
+  type: 'zone'
+  points: Array<{ x: number; y: number }>
+}
+
+export type AreaRestriction = RadiusArea | ZoneArea
 
 export interface PlayerAccessEntry {
   id: string

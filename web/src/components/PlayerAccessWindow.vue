@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { usePlayerAccessStore, type PlayerAccessEntry } from '../stores/playeraccess.store'
+import { usePlayerAccessStore, type PlayerAccessEntry, type AreaRestriction } from '../stores/playeraccess.store'
 import { useApi } from '../composables/useApi'
+import MapZonePicker from './MapZonePicker.vue'
 
 const store = usePlayerAccessStore()
 
@@ -15,7 +16,9 @@ const emptyForm = () => ({
   identifier: '',
   group: '',
   hasArea: false,
-  area: { x: '', y: '', z: '', radius: '' },
+  areaType: 'radius' as 'radius' | 'zone',
+  radius: { x: '', y: '', z: '', r: '' },
+  zonePoints: [] as Array<{ x: number; y: number }>,
 })
 
 const form = reactive(emptyForm())
@@ -31,10 +34,24 @@ const openEdit = (entry: PlayerAccessEntry) => {
   form.identifier = entry.identifier
   form.group = entry.group
   form.hasArea = entry.area !== null
-  form.area.x = entry.area ? String(entry.area.center.x) : ''
-  form.area.y = entry.area ? String(entry.area.center.y) : ''
-  form.area.z = entry.area ? String(entry.area.center.z) : ''
-  form.area.radius = entry.area ? String(entry.area.radius) : ''
+
+  if (entry.area?.type === 'zone') {
+    form.areaType = 'zone'
+    form.zonePoints = [...entry.area.points]
+    form.radius = { x: '', y: '', z: '', r: '' }
+  } else if (entry.area?.type === 'radius') {
+    form.areaType = 'radius'
+    form.radius.x = String(entry.area.center.x)
+    form.radius.y = String(entry.area.center.y)
+    form.radius.z = String(entry.area.center.z)
+    form.radius.r = String(entry.area.radius)
+    form.zonePoints = []
+  } else {
+    form.areaType = 'radius'
+    form.radius = { x: '', y: '', z: '', r: '' }
+    form.zonePoints = []
+  }
+
   editingId.value = entry.id
   showForm.value = true
 }
@@ -44,11 +61,19 @@ const cancelForm = () => {
   editingId.value = null
 }
 
-const buildArea = () => {
+const buildArea = (): AreaRestriction | null => {
   if (!form.hasArea) return null
+  if (form.areaType === 'zone') {
+    return { type: 'zone', points: [...form.zonePoints] }
+  }
   return {
-    center: { x: parseFloat(form.area.x) || 0, y: parseFloat(form.area.y) || 0, z: parseFloat(form.area.z) || 0 },
-    radius: parseFloat(form.area.radius) || 0,
+    type: 'radius',
+    center: {
+      x: parseFloat(form.radius.x) || 0,
+      y: parseFloat(form.radius.y) || 0,
+      z: parseFloat(form.radius.z) || 0,
+    },
+    radius: parseFloat(form.radius.r) || 0,
   }
 }
 
@@ -87,9 +112,9 @@ const useMyPosition = async () => {
     { x: 100.0, y: 200.0, z: 30.0 }
   )
   if (result.data.value) {
-    form.area.x = result.data.value.x.toFixed(1)
-    form.area.y = result.data.value.y.toFixed(1)
-    form.area.z = result.data.value.z.toFixed(1)
+    form.radius.x = result.data.value.x.toFixed(1)
+    form.radius.y = result.data.value.y.toFixed(1)
+    form.radius.z = result.data.value.z.toFixed(1)
   }
   fetchingPos.value = false
 }
@@ -105,6 +130,20 @@ const requestDelete = (id: string) => {
   } else {
     pendingDelete.value = id
   }
+}
+
+// ─── Area badge helpers ───────────────────────────────────────────────────────
+
+function areaLabel(area: AreaRestriction | null) {
+  if (!area) return 'No Area'
+  if (area.type === 'zone') return `⬡ ${area.points.length} pts`
+  return `◎ ${area.radius}m`
+}
+
+function areaTitle(area: AreaRestriction | null) {
+  if (!area) return ''
+  if (area.type === 'zone') return `Zone: ${area.points.length} vertices`
+  return `Center: ${area.center.x.toFixed(1)}, ${area.center.y.toFixed(1)}, ${area.center.z.toFixed(1)} — Radius: ${area.radius}m`
 }
 </script>
 
@@ -175,36 +214,68 @@ const requestDelete = (id: string) => {
         <!-- Area inputs -->
         <Transition name="form-slide">
           <div v-if="form.hasArea" class="mt-2 rounded border border-white/10 bg-white/5 p-3">
-            <div class="mb-2 flex items-center justify-between">
-              <span class="text-[11px] text-slate-400">Area Center</span>
+            <!-- Area type selector -->
+            <div class="mb-3 flex gap-1.5">
               <button
-                class="flex items-center gap-1 rounded bg-white/10 px-2 py-0.5 text-[11px] text-slate-300 transition hover:bg-white/20 disabled:opacity-40"
-                :disabled="fetchingPos"
-                @click="useMyPosition"
+                class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
+                :class="form.areaType === 'radius'
+                  ? 'bg-blue-600/50 text-blue-200'
+                  : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
+                @click="form.areaType = 'radius'"
               >
-                <i class="pi pi-map-marker text-[10px]" />
-                {{ fetchingPos ? 'Fetching…' : 'Use My Position' }}
+                <i class="pi pi-circle text-[10px]" />
+                Radius
+              </button>
+              <button
+                class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
+                :class="form.areaType === 'zone'
+                  ? 'bg-blue-600/50 text-blue-200'
+                  : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
+                @click="form.areaType = 'zone'"
+              >
+                <i class="pi pi-map text-[10px]" />
+                Zone
               </button>
             </div>
-            <div class="grid grid-cols-4 gap-1.5">
-              <div v-for="(label, field) in { x: 'X', y: 'Y', z: 'Z' }" :key="field" class="flex flex-col gap-0.5">
-                <span :class="{ 'text-red-400': field === 'x', 'text-green-400': field === 'y', 'text-blue-400': field === 'z' }" class="text-[10px] font-bold">{{ label }}</span>
-                <input
-                  v-model="form.area[field as 'x' | 'y' | 'z']"
-                  type="text"
-                  class="rounded border border-white/10 bg-black/40 px-1.5 py-0.5 font-mono text-xs text-slate-100 outline-none focus:border-white/25"
-                />
+
+            <!-- Radius inputs -->
+            <template v-if="form.areaType === 'radius'">
+              <div class="mb-2 flex items-center justify-between">
+                <span class="text-[11px] text-slate-400">Area Center</span>
+                <button
+                  class="flex items-center gap-1 rounded bg-white/10 px-2 py-0.5 text-[11px] text-slate-300 transition hover:bg-white/20 disabled:opacity-40"
+                  :disabled="fetchingPos"
+                  @click="useMyPosition"
+                >
+                  <i class="pi pi-map-marker text-[10px]" />
+                  {{ fetchingPos ? 'Fetching…' : 'Use My Position' }}
+                </button>
               </div>
-              <div class="flex flex-col gap-0.5">
-                <span class="text-[10px] text-slate-400">Radius (m)</span>
-                <input
-                  v-model="form.area.radius"
-                  type="text"
-                  placeholder="50"
-                  class="rounded border border-white/10 bg-black/40 px-1.5 py-0.5 font-mono text-xs text-slate-100 outline-none focus:border-white/25"
-                />
+              <div class="grid grid-cols-4 gap-1.5">
+                <div v-for="(label, field) in { x: 'X', y: 'Y', z: 'Z' }" :key="field" class="flex flex-col gap-0.5">
+                  <span :class="{ 'text-red-400': field === 'x', 'text-green-400': field === 'y', 'text-blue-400': field === 'z' }" class="text-[10px] font-bold">{{ label }}</span>
+                  <input
+                    v-model="form.radius[field as 'x' | 'y' | 'z']"
+                    type="text"
+                    class="rounded border border-white/10 bg-black/40 px-1.5 py-0.5 font-mono text-xs text-slate-100 outline-none focus:border-white/25"
+                  />
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-[10px] text-slate-400">Radius (m)</span>
+                  <input
+                    v-model="form.radius.r"
+                    type="text"
+                    placeholder="50"
+                    class="rounded border border-white/10 bg-black/40 px-1.5 py-0.5 font-mono text-xs text-slate-100 outline-none focus:border-white/25"
+                  />
+                </div>
               </div>
-            </div>
+            </template>
+
+            <!-- Zone inputs -->
+            <template v-else>
+              <MapZonePicker v-model="form.zonePoints" />
+            </template>
           </div>
         </Transition>
 
@@ -253,9 +324,9 @@ const requestDelete = (id: string) => {
         <span
           class="shrink-0 rounded px-2 py-0.5 text-[11px]"
           :class="entry.area ? 'bg-blue-500/15 text-blue-400' : 'bg-white/5 text-slate-500'"
-          :title="entry.area ? `Center: ${entry.area.center.x.toFixed(1)}, ${entry.area.center.y.toFixed(1)}, ${entry.area.center.z.toFixed(1)}` : ''"
+          :title="areaTitle(entry.area)"
         >
-          {{ entry.area ? `◎ ${entry.area.radius}m` : 'No Area' }}
+          {{ areaLabel(entry.area) }}
         </span>
 
         <!-- Actions -->
@@ -286,7 +357,7 @@ const requestDelete = (id: string) => {
 .form-slide-leave-active {
   transition: opacity 0.15s ease, max-height 0.2s ease;
   overflow: hidden;
-  max-height: 400px;
+  max-height: 500px;
 }
 .form-slide-enter-from,
 .form-slide-leave-to {
