@@ -145,7 +145,7 @@ function buildClusterLayer() {
     ;(marker as any)._prop = prop
 
     marker.bindTooltip(
-      `<span style="font-size:11px;color:#cbd5e1">${prop.model}</span><br><span style="font-size:10px;color:#64748b">${prop.group}</span>`,
+      `<span style="font-size:0.75rem;color:#cbd5e1">${prop.model}</span><br><span style="font-size:0.7rem;color:#64748b">${prop.group}</span>`,
       { direction: 'top', offset: L.point(0, -8) }
     )
 
@@ -231,7 +231,7 @@ const deleteFromCluster = (prop: PropEntry) => {
             : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
           @click="mode = 'clusters'"
         >
-          <i class="pi pi-circle-fill text-[10px]" />
+          <i class="pi pi-circle-fill text-[0.7rem]" />
           Clusters
         </button>
         <button
@@ -241,14 +241,14 @@ const deleteFromCluster = (prop: PropEntry) => {
             : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
           @click="mode = 'heatmap'"
         >
-          <i class="pi pi-stop-circle text-[10px]" />
+          <i class="pi pi-stop-circle text-[0.7rem]" />
           Heatmap
         </button>
       </div>
 
       <!-- Stats + outline toggle -->
       <div class="flex items-center gap-2">
-        <span class="text-[11px] text-slate-500">{{ store.props.length }} prop{{ store.props.length !== 1 ? 's' : '' }}</span>
+        <span class="text-xs text-slate-500">{{ store.props.length }} prop{{ store.props.length !== 1 ? 's' : '' }}</span>
         <button
           class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
           :class="allOutlined
@@ -258,14 +258,14 @@ const deleteFromCluster = (prop: PropEntry) => {
           :title="allOutlined ? 'Clear all outlines' : 'Outline all props'"
           @click="store.outlineAll()"
         >
-          <i class="pi pi-eye text-[10px]" />
+          <i class="pi pi-eye text-[0.7rem]" />
           {{ allOutlined ? 'Clear Outlines' : 'Outline All' }}
         </button>
       </div>
     </div>
 
     <!-- Map -->
-    <div ref="mapContainer" class="h-[400px] w-full" />
+    <div ref="mapContainer" class="h-[40vh] w-full" />
 
     <!-- Selection panel -->
     <div class="border-t border-white/10">
@@ -274,8 +274,8 @@ const deleteFromCluster = (prop: PropEntry) => {
         <div class="flex items-center gap-2 px-4 py-2.5 text-xs">
           <div class="flex min-w-0 flex-1 items-center gap-2">
             <span class="truncate font-mono text-slate-200">{{ selected.model }}</span>
-            <span class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-[11px] text-slate-300">{{ selected.group }}</span>
-            <span class="shrink-0 font-mono text-[11px] text-slate-500">
+            <span class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-xs text-slate-300">{{ selected.group }}</span>
+            <span class="shrink-0 font-mono text-xs text-slate-500">
               {{ selected.position.x.toFixed(1) }}, {{ selected.position.y.toFixed(1) }}, {{ selected.position.z.toFixed(1) }}
             </span>
           </div>
@@ -283,7 +283,7 @@ const deleteFromCluster = (prop: PropEntry) => {
             class="flex shrink-0 items-center gap-1 rounded bg-red-600/30 px-2.5 py-1 text-xs text-red-300 transition hover:bg-red-600/50"
             @click="deleteSelected"
           >
-            <i class="pi pi-trash text-[10px]" /> Delete
+            <i class="pi pi-trash text-[0.7rem]" /> Delete
           </button>
         </div>
       </template>
@@ -291,22 +291,22 @@ const deleteFromCluster = (prop: PropEntry) => {
       <!-- Cluster list (max zoom) -->
       <template v-else-if="selectedCluster.length > 0 && mode === 'clusters'">
         <div class="flex items-center justify-between border-b border-white/5 px-4 py-1.5">
-          <span class="text-[11px] text-slate-400">{{ selectedCluster.length }} props at this location</span>
-          <button class="text-[11px] text-slate-600 hover:text-slate-400 transition" @click="clearSelection">✕</button>
+          <span class="text-xs text-slate-400">{{ selectedCluster.length }} props at this location</span>
+          <button class="text-xs text-slate-600 hover:text-slate-400 transition" @click="clearSelection">✕</button>
         </div>
-        <div class="max-h-[160px] overflow-y-auto">
+        <div class="max-h-[15vh] overflow-y-auto">
           <div
             v-for="prop in selectedCluster"
             :key="prop.id"
             class="flex items-center gap-2 border-b border-white/5 px-4 py-1.5 text-xs last:border-0"
           >
             <span class="min-w-0 flex-1 truncate font-mono text-slate-300">{{ prop.model }}</span>
-            <span class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-[11px] text-slate-400">{{ prop.group }}</span>
+            <span class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-xs text-slate-400">{{ prop.group }}</span>
             <button
-              class="flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-[11px] text-red-400/70 transition hover:bg-red-600/20 hover:text-red-300"
+              class="flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-xs text-red-400/70 transition hover:bg-red-600/20 hover:text-red-300"
               @click="deleteFromCluster(prop)"
             >
-              <i class="pi pi-trash text-[10px]" />
+              <i class="pi pi-trash text-[0.7rem]" />
             </button>
           </div>
         </div>
@@ -314,7 +314,7 @@ const deleteFromCluster = (prop: PropEntry) => {
 
       <!-- Empty hint -->
       <div v-else class="flex h-[38px] items-center px-4">
-        <span class="text-[11px] text-slate-600">
+        <span class="text-xs text-slate-600">
           {{ mode === 'clusters' ? 'Click a marker or cluster to select' : 'Heatmap — density of placed props' }}
         </span>
       </div>

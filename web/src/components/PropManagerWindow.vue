@@ -23,7 +23,10 @@ const windowEl = ref<HTMLElement | null>(null)
 
 const { style } = useDraggable(windowEl, {
   handle: titleBar,
-  initialValue: { x: Math.max(0, (window.innerWidth - 560) / 2), y: 120 },
+  initialValue: {
+    x: Math.max(0, (window.innerWidth - Math.min(620, Math.max(440, window.innerWidth * 0.35))) / 2),
+    y: Math.round(window.innerHeight * 0.1),
+  },
 })
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
@@ -38,7 +41,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
     <div
       ref="windowEl"
       :style="style"
-      class="fixed z-20 flex w-[560px] flex-col overflow-hidden rounded-xl border border-white/10 bg-black/85 text-white shadow-2xl backdrop-blur-md"
+      class="fixed z-20 flex w-[clamp(440px,35vw,620px)] flex-col overflow-hidden rounded-xl border border-white/10 bg-black/85 text-white shadow-2xl"
     >
       <!-- Title bar -->
       <div
@@ -68,15 +71,17 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
             : 'text-slate-400 hover:text-slate-200'"
           @click="emit('update:activeTab', tab.key)"
         >
-          <i :class="`pi ${tab.icon} text-[11px]`" />
+          <i :class="`pi ${tab.icon} text-xs`" />
           {{ tab.label }}
         </button>
       </div>
 
       <!-- Tab content -->
-      <PropListWindow    v-if="activeTab === 'props'"       />
-      <PropMapWindow     v-else-if="activeTab === 'map'"    />
-      <PlayerAccessWindow v-else                            />
+      <div class="flex min-h-[50vh] flex-col">
+        <PropListWindow    v-if="activeTab === 'props'"       />
+        <PropMapWindow     v-else-if="activeTab === 'map'"    />
+        <PlayerAccessWindow v-else                            />
+      </div>
     </div>
   </Transition>
 </template>

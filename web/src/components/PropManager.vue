@@ -62,6 +62,7 @@ useNuiEvent('closePermissions', () => {
   <PropManagerWindow
     v-if="windowVisible"
     v-model:activeTab="activeTab"
+    :class="addPropStore.isVisible ? 'opacity-40 blur-sm pointer-events-none' : 'transition-[opacity,filter] duration-150'"
     @close="windowVisible = false"
   />
   <AddPropWindow v-if="addPropStore.isVisible" />

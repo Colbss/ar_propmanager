@@ -15,7 +15,10 @@ const windowEl = ref<HTMLElement | null>(null)
 
 const { style } = useDraggable(windowEl, {
   handle: titleBar,
-  initialValue: { x: Math.max(0, (window.innerWidth - 460) / 2), y: 160 },
+  initialValue: {
+    x: Math.max(0, (window.innerWidth - Math.min(520, Math.max(380, window.innerWidth * 0.30))) / 2),
+    y: Math.round(window.innerHeight * 0.15),
+  },
 })
 
 // ─── Prop list ────────────────────────────────────────────────────────────────
@@ -143,7 +146,7 @@ const place = async () => {
     <div
       ref="windowEl"
       :style="style"
-      class="fixed z-30 flex w-[460px] flex-col overflow-visible rounded-xl border border-white/10 bg-black/85 text-white shadow-2xl backdrop-blur-md"
+      class="fixed z-30 flex w-[clamp(380px,30vw,520px)] flex-col overflow-visible rounded-xl border border-white/10 bg-black/85 text-white shadow-2xl"
     >
       <!-- Title bar -->
       <div
@@ -164,10 +167,10 @@ const place = async () => {
 
         <!-- Model search -->
         <div class="flex flex-col gap-1.5">
-          <label class="text-[11px] font-medium text-slate-400">Prop Model</label>
+          <label class="text-xs font-medium text-slate-400">Prop Model</label>
           <div class="relative">
             <div class="pointer-events-none absolute inset-y-0 left-2.5 flex items-center">
-              <i class="pi pi-search text-[11px] text-slate-500" />
+              <i class="pi pi-search text-xs text-slate-500" />
             </div>
             <input
               v-model="searchQuery"
@@ -181,11 +184,11 @@ const place = async () => {
             <!-- Results dropdown -->
             <div
               v-if="showResults && filteredProps.length > 0"
-              class="absolute top-full z-10 mt-1 max-h-[220px] w-full overflow-y-auto rounded border border-white/10 bg-black/95 shadow-xl backdrop-blur-sm"
+              class="absolute top-full z-10 mt-1 max-h-[20vh] w-full overflow-y-auto rounded border border-white/10 bg-black/95 shadow-xl"
             >
               <div
                 v-if="listLoading"
-                class="px-3 py-2 text-[11px] text-slate-500"
+                class="px-3 py-2 text-xs text-slate-500"
               >Loading prop list…</div>
               <button
                 v-for="name in filteredProps"
@@ -197,8 +200,8 @@ const place = async () => {
               </button>
             </div>
           </div>
-          <p v-if="searchQuery && !propList.includes(searchQuery)" class="text-[10px] text-amber-400/80">
-            <i class="pi pi-exclamation-triangle mr-1 text-[9px]" />
+          <p v-if="searchQuery && !propList.includes(searchQuery)" class="text-[0.7rem] text-amber-400/80">
+            <i class="pi pi-exclamation-triangle mr-1 text-[0.6rem]" />
             Not in list — will be validated in-game
           </p>
         </div>
@@ -206,7 +209,7 @@ const place = async () => {
         <!-- Group + Render distance (2-col) -->
         <div class="grid grid-cols-2 gap-3">
           <div class="flex flex-col gap-1.5">
-            <label class="text-[11px] font-medium text-slate-400">Group</label>
+            <label class="text-xs font-medium text-slate-400">Group</label>
             <input
               v-model="form.group"
               list="add-prop-groups"
@@ -220,7 +223,7 @@ const place = async () => {
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-[11px] font-medium text-slate-400">Render Distance (m)</label>
+            <label class="text-xs font-medium text-slate-400">Render Distance (m)</label>
             <input
               v-model.number="form.renderDistance"
               type="number"
@@ -234,7 +237,7 @@ const place = async () => {
 
         <!-- Expiry -->
         <div class="flex flex-col gap-1.5">
-          <label class="flex cursor-pointer items-center gap-2 text-[11px] font-medium text-slate-400">
+          <label class="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-400">
             <input v-model="form.hasExpiry" type="checkbox" class="accent-blue-500" />
             Set Expiry
           </label>
@@ -249,7 +252,7 @@ const place = async () => {
         </div>
 
         <!-- Error -->
-        <p v-if="error" class="text-[11px] text-red-400">{{ error }}</p>
+        <p v-if="error" class="text-xs text-red-400">{{ error }}</p>
 
         <!-- Actions -->
         <div class="flex justify-end gap-2 border-t border-white/5 pt-2">
@@ -264,7 +267,7 @@ const place = async () => {
             :disabled="!canPlace || placing"
             @click="place"
           >
-            <i class="pi pi-map-marker text-[10px]" />
+            <i class="pi pi-map-marker text-[0.7rem]" />
             {{ placing ? 'Placing…' : 'Place Prop' }}
           </button>
         </div>

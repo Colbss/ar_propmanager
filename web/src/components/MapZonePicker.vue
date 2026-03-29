@@ -178,7 +178,7 @@ onUnmounted(() => {
   <div class="overflow-hidden rounded border border-white/10 bg-black/30">
     <!-- Hover coords bar -->
     <div class="flex h-7 items-center border-b border-white/10 bg-black/40 px-3">
-      <span class="font-mono text-[10px] text-slate-500">
+      <span class="font-mono text-[0.7rem] text-slate-500">
         <template v-if="hoverCoords">
           X {{ hoverCoords.x.toFixed(0) }}&nbsp;&nbsp;Y {{ hoverCoords.y.toFixed(0) }}
         </template>
@@ -189,30 +189,30 @@ onUnmounted(() => {
     </div>
 
     <!-- Map -->
-    <div ref="mapContainer" class="h-[280px] w-full" />
+    <div ref="mapContainer" class="h-[26vh] w-full" />
 
     <!-- Bottom bar: point count + undo / clear -->
     <div class="flex items-center justify-between border-t border-white/10 bg-black/40 px-3 py-1.5">
-      <span class="text-[11px] text-slate-400">
+      <span class="text-xs text-slate-400">
         {{ points.length }} point{{ points.length !== 1 ? 's' : '' }}
         <span v-if="points.length < 3" class="text-slate-600"> — need {{ 3 - points.length }} more</span>
       </span>
       <div class="flex items-center gap-1.5">
         <button
-          class="rounded px-2 py-0.5 text-[11px] text-slate-400 transition hover:bg-white/10 hover:text-slate-200 disabled:opacity-30"
+          class="rounded px-2 py-0.5 text-xs text-slate-400 transition hover:bg-white/10 hover:text-slate-200 disabled:opacity-30"
           :disabled="points.length === 0"
           title="Undo last point"
           @click.stop="undoLast"
         >
-          <i class="pi pi-undo text-[10px]" /> Undo
+          <i class="pi pi-undo text-[0.7rem]" /> Undo
         </button>
         <button
-          class="rounded px-2 py-0.5 text-[11px] text-slate-400 transition hover:bg-white/10 hover:text-red-400 disabled:opacity-30"
+          class="rounded px-2 py-0.5 text-xs text-slate-400 transition hover:bg-white/10 hover:text-red-400 disabled:opacity-30"
           :disabled="points.length === 0"
           title="Clear all"
           @click.stop="clearAll"
         >
-          <i class="pi pi-trash text-[10px]" /> Clear
+          <i class="pi pi-trash text-[0.7rem]" /> Clear
         </button>
       </div>
     </div>

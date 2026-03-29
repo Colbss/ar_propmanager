@@ -94,19 +94,19 @@ async function pasteVec(target: Vec3Fields, fmt: (n: number) => string) {
     <div v-if="pmStore.showOverlay" class="pointer-events-none absolute inset-0 z-10">
 
       <!-- ── Top left: Transform ────────────────────────────────────────── -->
-      <div class="pointer-events-auto absolute left-4 top-4 w-52 rounded-lg border border-white/10 bg-black/75 p-3 text-white backdrop-blur-sm">
+      <div class="pointer-events-auto absolute left-4 top-4 w-52 rounded-lg border border-white/10 bg-black/75 p-3 text-white ">
 
         <!-- Position -->
         <div class="mb-1 flex items-center justify-between">
-          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Position</span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Position</span>
           <div class="flex gap-1">
-            <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="copyVec(localPos)"><i class="pi pi-copy text-[11px]" /></button>
-            <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="pasteVec(localPos, (n) => n.toFixed(1))"><i class="pi pi-clipboard text-[11px]" /></button>
+            <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="copyVec(localPos)"><i class="pi pi-copy text-xs" /></button>
+            <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="pasteVec(localPos, (n) => n.toFixed(1))"><i class="pi pi-clipboard text-xs" /></button>
           </div>
         </div>
         <div class="mb-3 flex flex-col gap-1">
           <div v-for="axis in (['x', 'y', 'z'] as const)" :key="'p' + axis" class="flex items-center gap-1.5">
-            <span :class="{ 'text-red-400': axis === 'x', 'text-green-400': axis === 'y', 'text-blue-400': axis === 'z' }" class="w-3 text-center text-[11px] font-bold uppercase">{{ axis }}</span>
+            <span :class="{ 'text-red-400': axis === 'x', 'text-green-400': axis === 'y', 'text-blue-400': axis === 'z' }" class="w-3 text-center text-xs font-bold uppercase">{{ axis }}</span>
             <input
               v-model="localPos[axis]"
               type="text"
@@ -121,15 +121,15 @@ async function pasteVec(target: Vec3Fields, fmt: (n: number) => string) {
 
         <!-- Rotation -->
         <div class="mb-1 flex items-center justify-between">
-          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Rotation</span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Rotation</span>
           <div class="flex gap-1">
-            <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="copyVec(localRot)"><i class="pi pi-copy text-[11px]" /></button>
-            <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="pasteVec(localRot, (n) => Math.round(n).toString())"><i class="pi pi-clipboard text-[11px]" /></button>
+            <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="copyVec(localRot)"><i class="pi pi-copy text-xs" /></button>
+            <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="pasteVec(localRot, (n) => Math.round(n).toString())"><i class="pi pi-clipboard text-xs" /></button>
           </div>
         </div>
         <div class="flex flex-col gap-1">
           <div v-for="axis in (['x', 'y', 'z'] as const)" :key="'r' + axis" class="flex items-center gap-1.5">
-            <span :class="{ 'text-red-400': axis === 'x', 'text-green-400': axis === 'y', 'text-blue-400': axis === 'z' }" class="w-3 text-center text-[11px] font-bold uppercase">{{ axis }}</span>
+            <span :class="{ 'text-red-400': axis === 'x', 'text-green-400': axis === 'y', 'text-blue-400': axis === 'z' }" class="w-3 text-center text-xs font-bold uppercase">{{ axis }}</span>
             <input
               v-model="localRot[axis]"
               type="text"
@@ -144,7 +144,7 @@ async function pasteVec(target: Vec3Fields, fmt: (n: number) => string) {
       </div>
 
       <!-- ── Top right: Controls ──────────────────────────────────────────── -->
-      <div class="pointer-events-auto absolute right-4 top-4 flex w-44 flex-col gap-1.5 rounded-lg border border-white/10 bg-black/75 p-3 backdrop-blur-sm">
+      <div class="pointer-events-auto absolute right-4 top-4 flex w-44 flex-col gap-1.5 rounded-lg border border-white/10 bg-black/75 p-3 ">
         <div class="flex gap-2 text-xs">
           <fieldset class="flex-1 rounded border border-white/20 px-2 py-1">
             <legend class="px-1 text-slate-400">Mode</legend>
@@ -176,7 +176,7 @@ async function pasteVec(target: Vec3Fields, fmt: (n: number) => string) {
         <div
           v-for="bind in [pmStore.keys.mode, pmStore.keys.focus, pmStore.keys.finish, pmStore.keys.cancel]"
           :key="bind.key"
-          class="flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/75 px-3 py-2 backdrop-blur-sm"
+          class="flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/75 px-3 py-2 "
         >
           <kbd class="rounded bg-white/15 px-1.5 py-0.5 font-mono text-xs text-slate-100">{{ bind.key }}</kbd>
           <span class="text-xs text-slate-400">{{ bind.description }}</span>

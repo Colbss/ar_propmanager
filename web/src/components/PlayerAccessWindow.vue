@@ -151,12 +151,12 @@ function areaTitle(area: AreaRestriction | null) {
   <div class="flex flex-col" @mousedown="pendingDelete = null">
     <!-- Toolbar -->
     <div class="flex items-center justify-between border-b border-white/10 px-4 py-2">
-      <span class="text-[11px] text-slate-500">{{ store.entries.length }} player{{ store.entries.length !== 1 ? 's' : '' }} with access</span>
+      <span class="text-xs text-slate-500">{{ store.entries.length }} player{{ store.entries.length !== 1 ? 's' : '' }} with access</span>
       <button
         class="flex items-center gap-1.5 rounded bg-white/10 px-2.5 py-1 text-xs text-slate-300 transition hover:bg-white/20"
         @click.stop="openAdd"
       >
-        <i class="pi pi-plus text-[10px]" />
+        <i class="pi pi-plus text-[0.7rem]" />
         Grant Access
       </button>
     </div>
@@ -169,7 +169,7 @@ function areaTitle(area: AreaRestriction | null) {
         <div class="mb-3 grid grid-cols-2 gap-2">
           <!-- Name -->
           <div class="flex flex-col gap-1">
-            <label class="text-[11px] text-slate-400">Player Name</label>
+            <label class="text-xs text-slate-400">Player Name</label>
             <input
               v-model="form.name"
               type="text"
@@ -180,7 +180,7 @@ function areaTitle(area: AreaRestriction | null) {
 
           <!-- Group -->
           <div class="flex flex-col gap-1">
-            <label class="text-[11px] text-slate-400">Group</label>
+            <label class="text-xs text-slate-400">Group</label>
             <input
               v-model="form.group"
               list="access-groups"
@@ -195,7 +195,7 @@ function areaTitle(area: AreaRestriction | null) {
 
           <!-- Identifier (full width) -->
           <div class="col-span-2 flex flex-col gap-1">
-            <label class="text-[11px] text-slate-400">Identifier</label>
+            <label class="text-xs text-slate-400">Identifier</label>
             <input
               v-model="form.identifier"
               type="text"
@@ -223,7 +223,7 @@ function areaTitle(area: AreaRestriction | null) {
                   : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
                 @click="form.areaType = 'radius'"
               >
-                <i class="pi pi-circle text-[10px]" />
+                <i class="pi pi-circle text-[0.7rem]" />
                 Radius
               </button>
               <button
@@ -233,7 +233,7 @@ function areaTitle(area: AreaRestriction | null) {
                   : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
                 @click="form.areaType = 'zone'"
               >
-                <i class="pi pi-map text-[10px]" />
+                <i class="pi pi-map text-[0.7rem]" />
                 Zone
               </button>
             </div>
@@ -241,19 +241,19 @@ function areaTitle(area: AreaRestriction | null) {
             <!-- Radius inputs -->
             <template v-if="form.areaType === 'radius'">
               <div class="mb-2 flex items-center justify-between">
-                <span class="text-[11px] text-slate-400">Area Center</span>
+                <span class="text-xs text-slate-400">Area Center</span>
                 <button
-                  class="flex items-center gap-1 rounded bg-white/10 px-2 py-0.5 text-[11px] text-slate-300 transition hover:bg-white/20 disabled:opacity-40"
+                  class="flex items-center gap-1 rounded bg-white/10 px-2 py-0.5 text-xs text-slate-300 transition hover:bg-white/20 disabled:opacity-40"
                   :disabled="fetchingPos"
                   @click="useMyPosition"
                 >
-                  <i class="pi pi-map-marker text-[10px]" />
+                  <i class="pi pi-map-marker text-[0.7rem]" />
                   {{ fetchingPos ? 'Fetching…' : 'Use My Position' }}
                 </button>
               </div>
               <div class="grid grid-cols-4 gap-1.5">
                 <div v-for="(label, field) in { x: 'X', y: 'Y', z: 'Z' }" :key="field" class="flex flex-col gap-0.5">
-                  <span :class="{ 'text-red-400': field === 'x', 'text-green-400': field === 'y', 'text-blue-400': field === 'z' }" class="text-[10px] font-bold">{{ label }}</span>
+                  <span :class="{ 'text-red-400': field === 'x', 'text-green-400': field === 'y', 'text-blue-400': field === 'z' }" class="text-[0.7rem] font-bold">{{ label }}</span>
                   <input
                     v-model="form.radius[field as 'x' | 'y' | 'z']"
                     type="text"
@@ -261,7 +261,7 @@ function areaTitle(area: AreaRestriction | null) {
                   />
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[10px] text-slate-400">Radius (m)</span>
+                  <span class="text-[0.7rem] text-slate-400">Radius (m)</span>
                   <input
                     v-model="form.radius.r"
                     type="text"
@@ -299,7 +299,7 @@ function areaTitle(area: AreaRestriction | null) {
     </Transition>
 
     <!-- Access list -->
-    <div class="max-h-[400px] overflow-y-auto">
+    <div class="max-h-[40vh] overflow-y-auto">
       <div v-if="store.entries.length === 0" class="py-8 text-center text-xs text-slate-500">
         No players have been granted access.
       </div>
@@ -312,17 +312,17 @@ function areaTitle(area: AreaRestriction | null) {
         <!-- Name + identifier -->
         <div class="flex min-w-0 flex-1 flex-col gap-0.5">
           <span class="truncate font-medium text-slate-100">{{ entry.name }}</span>
-          <span class="truncate font-mono text-[11px] text-slate-500" :title="entry.identifier">{{ entry.identifier }}</span>
+          <span class="truncate font-mono text-xs text-slate-500" :title="entry.identifier">{{ entry.identifier }}</span>
         </div>
 
         <!-- Group badge -->
-        <span class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-[11px] text-slate-300">
+        <span class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-xs text-slate-300">
           {{ entry.group }}
         </span>
 
         <!-- Area badge -->
         <span
-          class="shrink-0 rounded px-2 py-0.5 text-[11px]"
+          class="shrink-0 rounded px-2 py-0.5 text-xs"
           :class="entry.area ? 'bg-blue-500/15 text-blue-400' : 'bg-white/5 text-slate-500'"
           :title="areaTitle(entry.area)"
         >
@@ -336,7 +336,7 @@ function areaTitle(area: AreaRestriction | null) {
             title="Edit"
             @click.stop="openEdit(entry)"
           >
-            <i class="pi pi-pencil text-[11px]" />
+            <i class="pi pi-pencil text-xs" />
           </button>
           <button
             class="rounded px-2 py-1 transition hover:bg-white/10"
@@ -344,7 +344,7 @@ function areaTitle(area: AreaRestriction | null) {
             :title="pendingDelete === entry.id ? 'Click again to confirm' : 'Revoke access'"
             @click.stop="requestDelete(entry.id)"
           >
-            <i class="pi text-[11px]" :class="pendingDelete === entry.id ? 'pi-exclamation-triangle' : 'pi-trash'" />
+            <i class="pi text-xs" :class="pendingDelete === entry.id ? 'pi-exclamation-triangle' : 'pi-trash'" />
           </button>
         </div>
       </div>

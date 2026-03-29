@@ -16,16 +16,32 @@
   @tailwind utilities;
 }
 
-.p-datepicker-panel {
-  @apply w-auto bg-gray-100/50 p-[var(--p-datepicker-panel-padding)] text-[var(--p-datepicker-panel-color)] backdrop-blur-xl dark:bg-gray-800/50;
+
+html {
+  font-size: clamp(13px, 0.9vw, 18px);
 }
 
-.p-datepicker-header {
-  @apply flex items-center justify-between rounded-lg bg-gray-100/5 p-0 backdrop-blur-xl dark:bg-gray-800/5;
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
 }
 
-.lscrollbar {
-  @apply scrollbar-thin scrollbar-track-rounded-[100px] scrollbar-thumb-rounded-[100px] scrollbar-corner-rounded-[100px] dark:scrollbar-track-gray-500/80 dark:scrollbar-thumb-gray-400/80;
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.75);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 body {

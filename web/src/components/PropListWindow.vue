@@ -59,13 +59,13 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
         class="flex items-center gap-1.5 rounded bg-blue-600/70 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-blue-500/80"
         @click.stop="addPropStore.isVisible = true"
       >
-        <i class="pi pi-plus text-[10px]" />
+        <i class="pi pi-plus text-[0.7rem]" />
         Add Prop
       </button>
     </div>
 
     <!-- Prop list -->
-    <div class="max-h-[480px] overflow-y-auto">
+    <div class="max-h-[45vh] overflow-y-auto">
       <div v-if="store.groups.size === 0" class="py-8 text-center text-xs text-slate-500">
         No props found.
       </div>
@@ -83,10 +83,10 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
           >
             <i
               :class="collapsed.has(groupName) ? 'pi-chevron-right' : 'pi-chevron-down'"
-              class="pi text-[10px] text-slate-500"
+              class="pi text-[0.7rem] text-slate-500"
             />
             {{ groupName }}
-            <span class="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-normal text-slate-400">
+            <span class="rounded-full bg-white/10 px-1.5 py-0.5 text-[0.7rem] font-normal text-slate-400">
               {{ groupProps.length }}
             </span>
           </button>
@@ -94,7 +94,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
           <!-- Group state badge + toggle -->
           <div class="flex shrink-0 items-center gap-1.5">
             <span
-              class="rounded px-1.5 py-0.5 text-[10px] font-medium"
+              class="rounded px-1.5 py-0.5 text-[0.7rem] font-medium"
               :class="isGroupEnabled(groupName)
                 ? 'bg-green-500/15 text-green-400'
                 : 'bg-white/5 text-slate-500'"
@@ -107,7 +107,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
               :title="isGroupEnabled(groupName) ? 'Disable group (despawn all props)' : 'Enable group (spawn all props)'"
               @click.stop="store.toggleGroup(groupName, !isGroupEnabled(groupName))"
             >
-              <i class="pi pi-power-off text-[11px]" />
+              <i class="pi pi-power-off text-xs" />
             </button>
           </div>
         </div>
@@ -124,30 +124,30 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
             ]"
           >
 
-            <!-- Model name -->
-            <span class="w-44 shrink-0 truncate font-mono text-slate-200" :title="prop.model">
-              {{ prop.model }}
-            </span>
+            <!-- Model + position stacked -->
+            <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span class="truncate font-mono text-xs text-slate-200" :title="prop.model">
+                {{ prop.model }}
+              </span>
+              <span class="truncate font-mono text-[0.7rem] text-slate-500" :title="fmtPos(prop.position)">
+                {{ fmtPos(prop.position) }}
+              </span>
+            </div>
 
-            <!-- Position -->
-            <span class="flex-1 truncate font-mono text-[11px] text-slate-500" :title="fmtPos(prop.position)">
-              {{ fmtPos(prop.position) }}
-            </span>
+            <!-- Expiry + actions -->
+            <div class="flex shrink-0 items-center gap-2">
+              <span
+                v-if="prop.expiresAt"
+                class="rounded px-1.5 py-0.5 text-[0.7rem]"
+                :class="prop.expiresAt * 1000 < Date.now()
+                  ? 'bg-red-500/20 text-red-400'
+                  : 'bg-amber-500/15 text-amber-400'"
+                :title="'Expires: ' + fmtExpiry(prop.expiresAt)"
+              >
+                <i class="pi pi-clock mr-0.5 text-[0.6rem]" />{{ fmtExpiry(prop.expiresAt) }}
+              </span>
 
-            <!-- Expiry -->
-            <span
-              v-if="prop.expiresAt"
-              class="shrink-0 rounded px-1.5 py-0.5 text-[10px]"
-              :class="prop.expiresAt * 1000 < Date.now()
-                ? 'bg-red-500/20 text-red-400'
-                : 'bg-amber-500/15 text-amber-400'"
-              :title="'Expires: ' + fmtExpiry(prop.expiresAt)"
-            >
-              <i class="pi pi-clock mr-0.5 text-[9px]" />{{ fmtExpiry(prop.expiresAt) }}
-            </span>
-
-            <!-- Actions -->
-            <div class="flex shrink-0 items-center gap-1">
+              <div class="flex items-center gap-1">
               <!-- Teleport -->
               <button
                 class="rounded px-2 py-1 text-slate-400 transition hover:bg-white/10 hover:text-slate-100"
@@ -155,7 +155,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
                 title="Teleport to prop"
                 @click.stop="store.teleport(prop.id)"
               >
-                <i class="pi pi-map-marker text-[11px]" />
+                <i class="pi pi-map-marker text-xs" />
               </button>
 
               <!-- Outline -->
@@ -166,7 +166,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
                 title="Toggle outline"
                 @click.stop="store.outline(prop.id)"
               >
-                <i class="pi pi-eye text-[11px]" />
+                <i class="pi pi-eye text-xs" />
               </button>
 
               <!-- Delete -->
@@ -176,8 +176,9 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
                 :title="pendingDelete === prop.id ? 'Click again to confirm delete' : 'Delete prop'"
                 @click.stop="requestDelete(prop.id)"
               >
-                <i class="pi text-[11px]" :class="pendingDelete === prop.id ? 'pi-exclamation-triangle' : 'pi-trash'" />
+                <i class="pi text-xs" :class="pendingDelete === prop.id ? 'pi-exclamation-triangle' : 'pi-trash'" />
               </button>
+              </div>
             </div>
           </div>
         </template>
@@ -185,7 +186,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
     </div>
 
     <!-- Footer: total count -->
-    <div class="border-t border-white/5 px-4 py-1.5 text-[10px] text-slate-600">
+    <div class="border-t border-white/5 px-4 py-1.5 text-[0.7rem] text-slate-600">
       {{ store.props.length }} prop{{ store.props.length !== 1 ? 's' : '' }} across {{ store.groups.size }} group{{ store.groups.size !== 1 ? 's' : '' }}
     </div>
   </div>
