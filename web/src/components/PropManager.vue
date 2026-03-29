@@ -22,6 +22,7 @@ interface PropPayload {
 function applyPropPayload(data: PropPayload) {
   propStore.props = data.props.map((p) => ({ ...p, outlined: p.outlined ?? false }))
   propStore.groupStates = data.groupStates ?? {}
+  propStore.applyGroupDefaults(propStore.groupStates)
 }
 
 // ─── Prop list events ─────────────────────────────────────────────────────────

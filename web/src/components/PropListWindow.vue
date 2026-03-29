@@ -6,15 +6,7 @@ import { useAddPropStore } from '../stores/addprop.store'
 const store = usePropManagerStore()
 const addPropStore = useAddPropStore()
 
-// ─── Group collapse state ─────────────────────────────────────────────────────
-
-const collapsed = ref(new Set<string>())
-
-const toggleCollapse = (name: string) => {
-  if (collapsed.value.has(name)) collapsed.value.delete(name)
-  else collapsed.value.add(name)
-  collapsed.value = new Set(collapsed.value)
-}
+// ─── Group collapse state (persisted in store) ────────────────────────────────
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -79,10 +71,10 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
           <!-- Collapse toggle -->
           <button
             class="flex flex-1 items-center gap-2 text-left font-semibold uppercase tracking-wider text-slate-400 transition hover:text-slate-200"
-            @click.stop="toggleCollapse(groupName)"
+            @click.stop="store.toggleCollapsed(groupName)"
           >
             <i
-              :class="collapsed.has(groupName) ? 'pi-chevron-right' : 'pi-chevron-down'"
+              :class="store.collapsedGroups.has(groupName) ? 'pi-chevron-right' : 'pi-chevron-down'"
               class="pi text-[0.7rem] text-slate-500"
             />
             {{ groupName }}
@@ -113,7 +105,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
         </div>
 
         <!-- Prop rows -->
-        <template v-if="!collapsed.has(groupName)">
+        <template v-if="!store.collapsedGroups.has(groupName)">
           <div
             v-for="prop in groupProps"
             :key="prop.id"

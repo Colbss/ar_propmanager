@@ -90,6 +90,11 @@ async function initMap() {
   map.on('mouseout', () => { hoverCoords.value = null })
 
   redraw()
+
+  // If a zone is already defined, zoom to fit it
+  if (polygon && points.value.length >= 2) {
+    map.fitBounds(polygon.getBounds(), { padding: [24, 24] })
+  }
 }
 
 function onMapClick(e: import('leaflet').LeafletMouseEvent) {
