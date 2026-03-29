@@ -42,11 +42,17 @@ export const usePropManagerStore = defineStore('propManager', () => {
     props.value = props.value.filter((p) => p.id !== id)
   }
 
+  const outlineAll = () => {
+    const target = !props.value.every((p) => p.outlined)
+    for (const prop of props.value) prop.outlined = target
+    useApi('OutlineAllProps', { method: 'POST', body: JSON.stringify({ outlined: target }) }, undefined, {})
+  }
+
   const toggleGroup = (group: string, enabled: boolean) => {
     useApi('ToggleGroup', { method: 'POST', body: JSON.stringify({ group, enabled }) }, undefined, {})
     // Optimistic update — will be corrected by the server's syncPropList broadcast
     groupStates.value = { ...groupStates.value, [group]: enabled }
   }
 
-  return { isVisible, props, groupStates, groups, teleport, outline, deleteProp, toggleGroup }
+  return { isVisible, props, groupStates, groups, teleport, outline, outlineAll, deleteProp, toggleGroup }
 })

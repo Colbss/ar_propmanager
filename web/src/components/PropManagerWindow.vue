@@ -3,13 +3,16 @@ import { ref } from 'vue'
 import { useDraggable } from '@vueuse/core'
 import PropListWindow from './PropListWindow.vue'
 import PlayerAccessWindow from './PlayerAccessWindow.vue'
+import PropMapWindow from './PropMapWindow.vue'
+
+type Tab = 'props' | 'permissions' | 'map'
 
 const props = defineProps<{
-  activeTab: 'props' | 'permissions'
+  activeTab: Tab
 }>()
 
 const emit = defineEmits<{
-  'update:activeTab': [tab: 'props' | 'permissions']
+  'update:activeTab': [tab: Tab]
   close: []
 }>()
 
@@ -22,6 +25,12 @@ const { style } = useDraggable(windowEl, {
   handle: titleBar,
   initialValue: { x: Math.max(0, (window.innerWidth - 560) / 2), y: 120 },
 })
+
+const TABS: { key: Tab; label: string; icon: string }[] = [
+  { key: 'props',       label: 'Props',         icon: 'pi-list'    },
+  { key: 'map',         label: 'Map',            icon: 'pi-map'     },
+  { key: 'permissions', label: 'Player Access',  icon: 'pi-users'   },
+]
 </script>
 
 <template>
@@ -51,30 +60,23 @@ const { style } = useDraggable(windowEl, {
       <!-- Tab strip -->
       <div class="flex border-b border-white/10 bg-white/3">
         <button
+          v-for="tab in TABS"
+          :key="tab.key"
           class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition"
-          :class="activeTab === 'props'
+          :class="activeTab === tab.key
             ? 'border-b-2 border-blue-400 text-blue-400'
             : 'text-slate-400 hover:text-slate-200'"
-          @click="emit('update:activeTab', 'props')"
+          @click="emit('update:activeTab', tab.key)"
         >
-          <i class="pi pi-list text-[11px]" />
-          Props
-        </button>
-        <button
-          class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition"
-          :class="activeTab === 'permissions'
-            ? 'border-b-2 border-blue-400 text-blue-400'
-            : 'text-slate-400 hover:text-slate-200'"
-          @click="emit('update:activeTab', 'permissions')"
-        >
-          <i class="pi pi-users text-[11px]" />
-          Player Access
+          <i :class="`pi ${tab.icon} text-[11px]`" />
+          {{ tab.label }}
         </button>
       </div>
 
       <!-- Tab content -->
-      <PropListWindow v-if="activeTab === 'props'" />
-      <PlayerAccessWindow v-else />
+      <PropListWindow    v-if="activeTab === 'props'"       />
+      <PropMapWindow     v-else-if="activeTab === 'map'"    />
+      <PlayerAccessWindow v-else                            />
     </div>
   </Transition>
 </template>

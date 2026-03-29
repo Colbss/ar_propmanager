@@ -9,7 +9,7 @@ const propStore = usePropManagerStore()
 const accessStore = usePlayerAccessStore()
 
 const windowVisible = ref(false)
-const activeTab = ref<'props' | 'permissions'>('props')
+const activeTab = ref<'props' | 'permissions' | 'map'>('props')
 
 interface PropPayload {
   props: PropEntry[]

@@ -1,0 +1,345 @@
+<script setup lang="ts">
+import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
+import L from 'leaflet'
+import type { Map as LeafletMap } from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import 'leaflet.markercluster'
+import 'leaflet.markercluster/dist/MarkerCluster.css'
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
+import 'leaflet.heat'
+import { usePropManagerStore, type PropEntry } from '../stores/propmanager.store'
+
+const store = usePropManagerStore()
+
+// ─── Mode ─────────────────────────────────────────────────────────────────────
+
+type Mode = 'clusters' | 'heatmap'
+const mode = ref<Mode>('clusters')
+
+// ─── Selection ────────────────────────────────────────────────────────────────
+
+const selected        = ref<PropEntry | null>(null)
+const selectedCluster = ref<PropEntry[]>([])
+
+function clearSelection() {
+  selected.value = null
+  selectedCluster.value = []
+}
+
+// ─── Outline all ─────────────────────────────────────────────────────────────
+
+const allOutlined = computed(() => store.props.length > 0 && store.props.every((p) => p.outlined))
+
+// ─── GTA V ↔ Leaflet coordinate conversion ───────────────────────────────────
+
+const MAP_CENTER: [number, number] = [-119.43, 58.84]
+const LAT_PER_100 = 1.421
+
+function gameToMap(x: number, y: number): [number, number] {
+  return [
+    MAP_CENTER[0] + (LAT_PER_100 / 100) * y,
+    MAP_CENTER[1] + (LAT_PER_100 / 100) * x,
+  ]
+}
+
+// ─── Map setup ────────────────────────────────────────────────────────────────
+
+const mapContainer = ref<HTMLElement | null>(null)
+
+let map: LeafletMap | null = null
+let clusterGroup: any = null
+let heatLayer: any = null
+
+const TILE_URL = 'https://s.rsg.sc/sc/images/games/GTAV/map/game/{z}/{x}/{y}.jpg'
+
+async function initMap() {
+  if (!mapContainer.value) return
+
+  map = L.map(mapContainer.value, {
+    crs: L.CRS.Simple,
+    maxBoundsViscosity: 1.0,
+    preferCanvas: true,
+    zoomControl: false,
+    attributionControl: false,
+    maxZoom: 7,
+    minZoom: 2,
+  })
+
+  const bounds = L.latLngBounds(L.latLng(0, 128), L.latLng(-192, 0))
+  map.setMaxBounds(bounds)
+  map.fitBounds(bounds)
+
+  const container = map.getContainer()
+  if (container) container.style.backgroundColor = '#384950'
+
+  L.tileLayer(TILE_URL, {
+    maxZoom: 7,
+    minZoom: 2,
+    bounds,
+    noWrap: true,
+  }).addTo(map)
+
+  L.control.zoom({ position: 'bottomright' }).addTo(map)
+
+  // Deselect when clicking empty map
+  map.on('click', clearSelection)
+
+  buildLayers()
+}
+
+// ─── Layer builders ───────────────────────────────────────────────────────────
+
+function clearLayers() {
+  if (clusterGroup) { map?.removeLayer(clusterGroup); clusterGroup = null }
+  if (heatLayer)    { map?.removeLayer(heatLayer);    heatLayer    = null }
+}
+
+function buildClusterLayer() {
+  if (!map) return
+
+  clusterGroup = (L as any).markerClusterGroup({
+    maxClusterRadius: 50,
+    showCoverageOnHover: false,
+    spiderfyOnMaxZoom: false,
+    zoomToBoundsOnClick: false,   // we handle click manually
+    iconCreateFunction: (cluster: any) => {
+      const n = cluster.getChildCount()
+      const size = n >= 100 ? 40 : n >= 10 ? 34 : 28
+      return L.divIcon({
+        html: `<div class="pm-cluster" style="width:${size}px;height:${size}px">${n}</div>`,
+        className: '',
+        iconSize: L.point(size, size),
+        iconAnchor: L.point(size / 2, size / 2),
+      })
+    },
+  })
+
+  // Cluster click: zoom in below max zoom, show prop list at max zoom
+  clusterGroup.on('clusterclick', (e: any) => {
+    L.DomEvent.stopPropagation(e)
+    if (!map) return
+    if (map.getZoom() < map.getMaxZoom()) {
+      map.fitBounds(e.layer.getBounds(), { padding: [30, 30], maxZoom: map.getMaxZoom() })
+      clearSelection()
+    } else {
+      const props: PropEntry[] = e.layer.getAllChildMarkers()
+        .map((m: any) => m._prop as PropEntry)
+        .filter(Boolean)
+      selected.value = null
+      selectedCluster.value = props
+    }
+  })
+
+  for (const prop of store.props) {
+    const [lat, lng] = gameToMap(prop.position.x, prop.position.y)
+    const isSelected = selected.value?.id === prop.id
+
+    const marker = L.circleMarker([lat, lng], {
+      radius: isSelected ? 8 : 5,
+      color: prop.outlined ? '#f59e0b' : isSelected ? '#a78bfa' : '#3b82f6',
+      fillColor: prop.outlined ? '#fcd34d' : isSelected ? '#c4b5fd' : '#60a5fa',
+      fillOpacity: 1,
+      weight: isSelected ? 3 : 2,
+    })
+
+    ;(marker as any)._prop = prop
+
+    marker.bindTooltip(
+      `<span style="font-size:11px;color:#cbd5e1">${prop.model}</span><br><span style="font-size:10px;color:#64748b">${prop.group}</span>`,
+      { direction: 'top', offset: L.point(0, -8) }
+    )
+
+    marker.on('click', (e: any) => {
+      L.DomEvent.stopPropagation(e)
+      selectedCluster.value = []
+      selected.value = selected.value?.id === prop.id ? null : prop
+    })
+
+    clusterGroup.addLayer(marker)
+  }
+
+  map.addLayer(clusterGroup)
+}
+
+function buildHeatLayer() {
+  if (!map) return
+
+  const points = store.props.map((p) => {
+    const [lat, lng] = gameToMap(p.position.x, p.position.y)
+    return [lat, lng, 1] as [number, number, number]
+  })
+
+  heatLayer = (L as any).heatLayer(points, {
+    radius: 25,
+    blur: 20,
+    maxZoom: map.getMaxZoom(),
+    gradient: { 0.3: '#3b82f6', 0.6: '#a855f7', 1.0: '#ef4444' },
+    minOpacity: 0.4,
+  }).addTo(map)
+}
+
+function buildLayers() {
+  clearLayers()
+  if (mode.value === 'clusters') {
+    buildClusterLayer()
+  } else {
+    clearSelection()
+    buildHeatLayer()
+  }
+}
+
+// ─── Reactivity ───────────────────────────────────────────────────────────────
+
+watch(() => store.props, () => { if (map) buildLayers() }, { deep: true })
+watch(mode, () => { if (map) buildLayers() })
+
+watch(
+  () => mapContainer.value,
+  (el) => { if (el) nextTick(initMap) },
+  { immediate: true }
+)
+
+onUnmounted(() => {
+  map?.remove()
+  map = null
+})
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+
+const deleteSelected = () => {
+  if (!selected.value) return
+  store.deleteProp(selected.value.id)
+  selected.value = null
+}
+
+const deleteFromCluster = (prop: PropEntry) => {
+  store.deleteProp(prop.id)
+  selectedCluster.value = selectedCluster.value.filter((p) => p.id !== prop.id)
+}
+</script>
+
+<template>
+  <div class="flex flex-col">
+    <!-- Toolbar -->
+    <div class="flex items-center justify-between border-b border-white/10 px-4 py-2">
+      <!-- Mode toggle -->
+      <div class="flex gap-1">
+        <button
+          class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
+          :class="mode === 'clusters'
+            ? 'bg-blue-600/50 text-blue-200'
+            : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
+          @click="mode = 'clusters'"
+        >
+          <i class="pi pi-circle-fill text-[10px]" />
+          Clusters
+        </button>
+        <button
+          class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
+          :class="mode === 'heatmap'
+            ? 'bg-red-600/50 text-red-200'
+            : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
+          @click="mode = 'heatmap'"
+        >
+          <i class="pi pi-stop-circle text-[10px]" />
+          Heatmap
+        </button>
+      </div>
+
+      <!-- Stats + outline toggle -->
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] text-slate-500">{{ store.props.length }} prop{{ store.props.length !== 1 ? 's' : '' }}</span>
+        <button
+          class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
+          :class="allOutlined
+            ? 'bg-amber-500/30 text-amber-300 hover:bg-amber-500/20'
+            : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
+          :disabled="store.props.length === 0"
+          :title="allOutlined ? 'Clear all outlines' : 'Outline all props'"
+          @click="store.outlineAll()"
+        >
+          <i class="pi pi-eye text-[10px]" />
+          {{ allOutlined ? 'Clear Outlines' : 'Outline All' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Map -->
+    <div ref="mapContainer" class="h-[400px] w-full" />
+
+    <!-- Selection panel -->
+    <div class="border-t border-white/10">
+      <!-- Single prop selected -->
+      <template v-if="selected && mode === 'clusters'">
+        <div class="flex items-center gap-2 px-4 py-2.5 text-xs">
+          <div class="flex min-w-0 flex-1 items-center gap-2">
+            <span class="truncate font-mono text-slate-200">{{ selected.model }}</span>
+            <span class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-[11px] text-slate-300">{{ selected.group }}</span>
+            <span class="shrink-0 font-mono text-[11px] text-slate-500">
+              {{ selected.position.x.toFixed(1) }}, {{ selected.position.y.toFixed(1) }}, {{ selected.position.z.toFixed(1) }}
+            </span>
+          </div>
+          <button
+            class="flex shrink-0 items-center gap-1 rounded bg-red-600/30 px-2.5 py-1 text-xs text-red-300 transition hover:bg-red-600/50"
+            @click="deleteSelected"
+          >
+            <i class="pi pi-trash text-[10px]" /> Delete
+          </button>
+        </div>
+      </template>
+
+      <!-- Cluster list (max zoom) -->
+      <template v-else-if="selectedCluster.length > 0 && mode === 'clusters'">
+        <div class="flex items-center justify-between border-b border-white/5 px-4 py-1.5">
+          <span class="text-[11px] text-slate-400">{{ selectedCluster.length }} props at this location</span>
+          <button class="text-[11px] text-slate-600 hover:text-slate-400 transition" @click="clearSelection">✕</button>
+        </div>
+        <div class="max-h-[160px] overflow-y-auto">
+          <div
+            v-for="prop in selectedCluster"
+            :key="prop.id"
+            class="flex items-center gap-2 border-b border-white/5 px-4 py-1.5 text-xs last:border-0"
+          >
+            <span class="min-w-0 flex-1 truncate font-mono text-slate-300">{{ prop.model }}</span>
+            <span class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-[11px] text-slate-400">{{ prop.group }}</span>
+            <button
+              class="flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-[11px] text-red-400/70 transition hover:bg-red-600/20 hover:text-red-300"
+              @click="deleteFromCluster(prop)"
+            >
+              <i class="pi pi-trash text-[10px]" />
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <!-- Empty hint -->
+      <div v-else class="flex h-[38px] items-center px-4">
+        <span class="text-[11px] text-slate-600">
+          {{ mode === 'clusters' ? 'Click a marker or cluster to select' : 'Heatmap — density of placed props' }}
+        </span>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style>
+/* Cluster marker icon — dark themed */
+.pm-cluster {
+  background: rgba(59, 130, 246, 0.85);
+  border: 2px solid rgba(147, 197, 253, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+/* Override leaflet.markercluster default styles */
+.leaflet-cluster-anim .leaflet-marker-icon,
+.leaflet-cluster-anim .leaflet-marker-shadow {
+  transition: transform 0.3s ease-out, opacity 0.3s ease-in;
+}
+</style>

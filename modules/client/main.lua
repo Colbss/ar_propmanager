@@ -229,6 +229,12 @@ RegisterNUICallback('OutlineProp', function(data, cb)
     cb('ok')
 end)
 
+RegisterNUICallback('OutlineAllProps', function(data, cb)
+    -- Bulk outline toggle — same as OutlineProp but for all props.
+    -- Actual visual effect can be applied here once the outline system is wired up.
+    cb('ok')
+end)
+
 RegisterNUICallback('DeleteProp', function(data, cb)
     TriggerServerEvent('ar_propmanager2:deleteProp', { id = data.id })
     cb('ok')
