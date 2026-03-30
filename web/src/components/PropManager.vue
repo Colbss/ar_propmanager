@@ -13,48 +13,38 @@ const addPropStore = useAddPropStore()
 
 const windowVisible = ref(false)
 const activeTab = ref<'props' | 'permissions' | 'map'>('props')
+const level = ref(0)
 
-interface PropPayload {
+interface OpenPropManagerPayload {
+  level: number
   props: PropEntry[]
   groupStates: Record<string, boolean>
+  playerAccess?: PlayerAccessEntry[]
+  groups?: string[]
 }
 
-function applyPropPayload(data: PropPayload) {
-  propStore.props = data.props.map((p) => ({ ...p, outlined: p.outlined ?? false }))
+function applyPayload(data: OpenPropManagerPayload) {
+  level.value = data.level ?? 0
+  propStore.props = (data.props ?? []).map((p) => ({ ...p, outlined: p.outlined ?? false }))
   propStore.groupStates = data.groupStates ?? {}
   propStore.applyGroupDefaults(propStore.groupStates)
+  if (data.playerAccess) accessStore.entries = data.playerAccess
+  if (data.groups) accessStore.availableGroups = data.groups
 }
 
-// ─── Prop list events ─────────────────────────────────────────────────────────
-
-useNuiEvent<PropPayload>('openPropManager', (data) => {
-  applyPropPayload(data)
-  activeTab.value = 'props'
+useNuiEvent<OpenPropManagerPayload>('openPropManager', (data) => {
+  applyPayload(data)
+  activeTab.value = data.level >= 1 ? 'props' : 'permissions'
   windowVisible.value = true
 })
 
-useNuiEvent<PropPayload>('updatePropList', (data) => {
-  applyPropPayload(data)
+useNuiEvent<{ props: PropEntry[]; groupStates: Record<string, boolean> }>('updatePropList', (data) => {
+  propStore.props = (data.props ?? []).map((p) => ({ ...p, outlined: p.outlined ?? false }))
+  propStore.groupStates = data.groupStates ?? {}
+  propStore.applyGroupDefaults(propStore.groupStates)
 })
 
 useNuiEvent('closePropManager', () => {
-  windowVisible.value = false
-})
-
-// ─── Player access events ─────────────────────────────────────────────────────
-
-useNuiEvent<{ permissions: PlayerAccessEntry[]; groups: string[] }>('openPermissions', (data) => {
-  accessStore.entries = data.permissions
-  accessStore.availableGroups = data.groups
-  activeTab.value = 'permissions'
-  windowVisible.value = true
-})
-
-useNuiEvent<{ permissions: PlayerAccessEntry[] }>('updatePermissions', (data) => {
-  accessStore.entries = data.permissions
-})
-
-useNuiEvent('closePermissions', () => {
   windowVisible.value = false
 })
 </script>
@@ -63,6 +53,7 @@ useNuiEvent('closePermissions', () => {
   <PropManagerWindow
     v-if="windowVisible"
     v-model:activeTab="activeTab"
+    :level="level"
     :class="addPropStore.isVisible ? 'opacity-40 blur-sm pointer-events-none' : 'transition-[opacity,filter] duration-150'"
     @close="windowVisible = false"
   />

@@ -1,5 +1,166 @@
 local config = require 'config'
 LocalState = LocalPlayer.state
+lib.locale()
+
+-- ─── Keybinds ─────────────────────────────────────────────────────────────────
+
+-- Courtesy of @MadsL
+-- https://forum.cfx.re/t/help-how-to-get-the-current-keybind-of-a-registered-keymap/1847600/7
+
+local specialkeyCodes = {
+    ['b_100'] = 'LMB', -- Left Mouse Button
+    ['b_101'] = 'RMB', -- Right Mouse Button
+    ['b_102'] = 'MMB', -- Middle Mouse Button
+    ['b_103'] = 'Mouse.ExtraBtn1',
+    ['b_104'] = 'Mouse.ExtraBtn2',
+    ['b_105'] = 'Mouse.ExtraBtn3',
+    ['b_106'] = 'Mouse.ExtraBtn4',
+    ['b_107'] = 'Mouse.ExtraBtn5',
+    ['b_108'] = 'Mouse.ExtraBtn6',
+    ['b_109'] = 'Mouse.ExtraBtn7',
+    ['b_110'] = 'Mouse.ExtraBtn8',
+    ['b_115'] = 'MouseWheel.Up',
+    ['b_116'] = 'MouseWheel.Down',
+    ['b_130'] = 'NumSubstract',
+    ['b_131'] = 'NumAdd',
+    ['b_134'] = 'Num Multiplication',
+    ['b_135'] = 'Num Enter',
+    ['b_137'] = 'Num1',
+    ['b_138'] = 'Num2',
+    ['b_139'] = 'Num3',
+    ['b_140'] = 'Num4',
+    ['b_141'] = 'Num5',
+    ['b_142'] = 'Num6',
+    ['b_143'] = 'Num7',
+    ['b_144'] = 'Num8',
+    ['b_145'] = 'Num9',
+    ['b_170'] = 'F1',
+    ['b_171'] = 'F2',
+    ['b_172'] = 'F3',
+    ['b_173'] = 'F4',
+    ['b_174'] = 'F5',
+    ['b_175'] = 'F6',
+    ['b_176'] = 'F7',
+    ['b_177'] = 'F8',
+    ['b_178'] = 'F9',
+    ['b_179'] = 'F10',
+    ['b_180'] = 'F11',
+    ['b_181'] = 'F12',
+    ['b_182'] = 'F13',
+    ['b_183'] = 'F14',
+    ['b_184'] = 'F15',
+    ['b_185'] = 'F16',
+    ['b_186'] = 'F17',
+    ['b_187'] = 'F18',
+    ['b_188'] = 'F19',
+    ['b_189'] = 'F20',
+    ['b_190'] = 'F21',
+    ['b_191'] = 'F22',
+    ['b_192'] = 'F23',
+    ['b_193'] = 'F24',
+    ['b_194'] = 'Arrow Up',
+    ['b_195'] = 'Arrow Down',
+    ['b_196'] = 'Arrow Left',
+    ['b_197'] = 'Arrow Right',
+    ['b_198'] = 'Delete',
+    ['b_199'] = 'Escape',
+    ['b_200'] = 'Insert',
+    ['b_201'] = 'End',
+    ['b_210'] = 'Delete',
+    ['b_211'] = 'Insert',
+    ['b_212'] = 'End',
+    ['b_1000'] = 'Shift',
+    ['b_1002'] = 'Tab',
+    ['b_1003'] = 'Enter',
+    ['b_1004'] = 'Backspace',
+    ['b_1009'] = 'PageUp',
+    ['b_1008'] = 'Home',
+    ['b_1010'] = 'PageDown',
+    ['b_1012'] = 'CapsLock',
+    ['b_1013'] = 'Control',
+    ['b_1014'] = 'Right Control',
+    ['b_1015'] = 'Alt',
+    ['b_1055'] = 'Home',
+    ['b_1056'] = 'PageUp',
+    ['b_2000'] = 'Space'
+}
+
+local function GetKeyLabel(commandHash)
+    local key = GetControlInstructionalButton(0, commandHash | 0x80000000, true)
+    if string.find(key, "t_") then
+        local label, _count = string.gsub(key, "t_", "")
+        return label
+    else
+        return specialkeyCodes[key] or "unknown"
+    end
+end
+
+local CloseGizmo -- forward declaration (keybind callbacks reference it before definition)
+
+keybinds = {}
+
+keybinds.mode = lib.addKeybind({
+    name = 'gizmo_mode',
+    description = string.format('~b~%s~w~', locale('keybind_mode')),
+    defaultKey = 'R',
+    onPressed = function(self)
+        SendNUIMessage({ action = 'toggleMode', data = {} })
+    end
+})
+keybinds.mode:disable(true)
+
+keybinds.focus = lib.addKeybind({
+    name = 'gizmo_focus',
+    description = string.format('~b~%s~w~', locale('keybind_focus')),
+    defaultKey = 'F',
+    onPressed = function(self)
+        -- Focus camera handled server-side or via cam natives if needed
+    end
+})
+keybinds.focus:disable(true)
+
+keybinds.finish = lib.addKeybind({
+    name = 'gizmo_finish',
+    description = string.format('~b~%s~w~', locale('keybind_finish')),
+    defaultKey = 'E',
+    onPressed = function(self)
+        if CloseGizmo then CloseGizmo(true) end
+    end
+})
+keybinds.finish:disable(true)
+
+keybinds.cancel = lib.addKeybind({
+    name = 'gizmo_cancel',
+    description = string.format('~b~%s~w~', locale('keybind_cancel')),
+    defaultKey = 'Back',
+    onPressed = function(self)
+        if CloseGizmo then CloseGizmo(false) end
+    end
+})
+keybinds.cancel:disable(true)
+
+function keybinds.GetKeybinds()
+    return {
+        mode = {
+            key = GetKeyLabel(keybinds.mode.hash),
+            description = keybinds.mode.description,
+        },
+        focus = {
+            key = GetKeyLabel(keybinds.focus.hash),
+            description = keybinds.focus.description,
+        },
+        finish = {
+            key = GetKeyLabel(keybinds.finish.hash),
+            description = keybinds.finish.description,
+        },
+        cancel = {
+            key = GetKeyLabel(keybinds.cancel.hash),
+            description = keybinds.cancel.description,
+        },
+    }
+end
+
+-- ─── State ────────────────────────────────────────────────────────────────────
 
 local gizmoActive = false
 local currentGizmoEntity = nil
@@ -7,10 +168,12 @@ local currentGizmoOptions = nil
 local originalCoords = nil
 local originalQuat = nil
 
+-- ─── Gizmo ────────────────────────────────────────────────────────────────────
+
 --- Open the gizmo for the given entity handle.
 --- @param entity  number  Entity handle
 --- @param options table   Optional: { restrictRotationAxes, attachingProp, simpleOverlay, group, dbId, model }
-function common.OpenGizmo(entity, options)
+local function OpenGizmo(entity, options)
     assert(DoesEntityExist(entity), 'ar_propmanager: entity does not exist')
     options = options or {}
     currentGizmoOptions = options
@@ -71,7 +234,7 @@ end
 
 --- Close the active gizmo session.
 --- @param save boolean  true = keep final transform, false = revert to original
-function common.CloseGizmo(save)
+CloseGizmo = function(save)
     if not gizmoActive then return end
     gizmoActive = false
 
@@ -175,44 +338,14 @@ RegisterNUICallback('Finish', function(_, cb)
             expiresAt      = opts.expiresAt,
         })
     end
-    common.CloseGizmo(true)
+    CloseGizmo(true)
     cb('ok')
 end)
 
 RegisterNUICallback('Cancel', function(_, cb)
-    common.CloseGizmo(false)
+    CloseGizmo(false)
     cb('ok')
 end)
-
--- ─── Test command ─────────────────────────────────────────────────────────────
-
-RegisterCommand('test_gizmo', function(source, args, rawCommand)
-    local model = args[1] or 'prop_bench_01a'
-    local modelHash = GetHashKey(model)
-
-    RequestModel(modelHash)
-    while not HasModelLoaded(modelHash) do
-        Wait(10)
-    end
-
-    local ped = PlayerPedId()
-    local pos = GetEntityCoords(ped)
-    local heading = GetEntityHeading(ped)
-
-    -- Spawn 3m in front of the player
-    local prop = CreateObject(
-        modelHash,
-        pos.x + math.sin(math.rad(-heading)) * 3.0,
-        pos.y + math.cos(math.rad(-heading)) * 3.0,
-        pos.z,
-        true, true, false
-    )
-
-    SetModelAsNoLongerNeeded(modelHash)
-    common.OpenGizmo(prop)
-end, false)
-
--- ─── Add Prop NUI Callbacks ───────────────────────────────────────────────────
 
 RegisterNUICallback('GetPropList', function(_, cb)
     local propList = require 'config/props'
@@ -253,7 +386,7 @@ RegisterNUICallback('PlaceProp', function(data, cb)
 
     SetModelAsNoLongerNeeded(modelHash)
 
-    common.OpenGizmo(prop, {
+    OpenGizmo(prop, {
         model          = model,
         group          = data.group or 'default',
         renderDistance = data.renderDistance or 200,
@@ -264,7 +397,19 @@ RegisterNUICallback('PlaceProp', function(data, cb)
     cb('ok')
 end)
 
--- ─── Prop Manager NUI Callbacks ──────────────────────────────────────────────
+-- ─── Prop Manager ─────────────────────────────────────────────────────────────
+
+--- Open the prop manager window.
+--- @param payload table  { props = [...], groupStates = { [groupName] = bool } }
+local function OpenPropManager(payload)
+    SetNuiFocus(true, true)
+    SendNUIMessage({ action = 'openPropManager', data = payload })
+end
+
+local function ClosePropManager()
+    SetNuiFocus(false, false)
+    SendNUIMessage({ action = 'closePropManager', data = {} })
+end
 
 RegisterNUICallback('TeleportToProp', function(data, cb)
     lib.callback('ar_propmanager:canInteractWithProp', false, function(allowed)
@@ -299,19 +444,55 @@ RegisterNUICallback('ToggleGroup', function(data, cb)
     cb('ok')
 end)
 
--- ─── Prop Manager helpers ─────────────────────────────────────────────────────
+-- ─── Player Access ────────────────────────────────────────────────────────────
 
---- Open the prop manager window.
---- @param payload table  { props = [...], groupStates = { [groupName] = bool } }
-function common.OpenPropManager(payload)
-    SetNuiFocus(true, true)
-    SendNUIMessage({ action = 'openPropManager', data = payload })
-end
+RegisterNUICallback('AddPlayerAccess', function(data, cb)
+    TriggerServerEvent('ar_propmanager:addPlayerAccess', data)
+    cb('ok')
+end)
 
-function common.ClosePropManager()
-    SetNuiFocus(false, false)
-    SendNUIMessage({ action = 'closePropManager', data = {} })
-end
+RegisterNUICallback('UpdatePlayerAccess', function(data, cb)
+    TriggerServerEvent('ar_propmanager:updatePlayerAccess', data)
+    cb('ok')
+end)
+
+RegisterNUICallback('DeletePlayerAccess', function(data, cb)
+    TriggerServerEvent('ar_propmanager:deletePlayerAccess', data.id)
+    cb('ok')
+end)
+
+RegisterNUICallback('GetPlayerPosition', function(_, cb)
+    local pos = GetEntityCoords(PlayerPedId())
+    cb({ x = pos.x, y = pos.y, z = pos.z })
+end)
+
+-- ─── Commands ─────────────────────────────────────────────────────────────────
+
+RegisterCommand('test_gizmo', function(source, args, rawCommand)
+    local model = args[1] or 'prop_bench_01a'
+    local modelHash = GetHashKey(model)
+
+    RequestModel(modelHash)
+    while not HasModelLoaded(modelHash) do
+        Wait(10)
+    end
+
+    local ped = PlayerPedId()
+    local pos = GetEntityCoords(ped)
+    local heading = GetEntityHeading(ped)
+
+    -- Spawn 3m in front of the player
+    local prop = CreateObject(
+        modelHash,
+        pos.x + math.sin(math.rad(-heading)) * 3.0,
+        pos.y + math.cos(math.rad(-heading)) * 3.0,
+        pos.z,
+        true, true, false
+    )
+
+    SetModelAsNoLongerNeeded(modelHash)
+    OpenGizmo(prop)
+end, false)
 
 RegisterCommand('test_prop_manager', function()
     -- Build a fake list from nearby objects for quick testing
@@ -353,79 +534,25 @@ RegisterCommand('test_prop_manager', function()
     local groupStates = {}
     for _, g in ipairs(mockGroups) do groupStates[g] = true end
 
-    common.OpenPropManager({ props = propList, groupStates = groupStates })
+    OpenPropManager({ props = propList, groupStates = groupStates })
 end, false)
 
--- ─── Player access NUI Callbacks ─────────────────────────────────────────────
-
-RegisterNUICallback('AddPlayerAccess', function(data, cb)
-    TriggerServerEvent('ar_propmanager:addPlayerAccess', data)
-    cb('ok')
-end)
-
-RegisterNUICallback('UpdatePlayerAccess', function(data, cb)
-    TriggerServerEvent('ar_propmanager:updatePlayerAccess', data)
-    cb('ok')
-end)
-
-RegisterNUICallback('DeletePlayerAccess', function(data, cb)
-    TriggerServerEvent('ar_propmanager:deletePlayerAccess', data.id)
-    cb('ok')
-end)
-
-RegisterNUICallback('GetPlayerPosition', function(_, cb)
-    local pos = GetEntityCoords(PlayerPedId())
-    cb({ x = pos.x, y = pos.y, z = pos.z })
-end)
-
---- Open the permissions manager window.
---- @param permissionList table  Array of { id, identifier, name, group, area }
---- @param groups         table  Array of group name strings
-function common.OpenPermissions(permissionList, groups)
-    SetNuiFocus(true, true)
-    SendNUIMessage({
-        action = 'openPermissions',
-        data   = { permissions = permissionList, groups = groups }
-    })
-end
-
-function common.ClosePermissions()
-    SetNuiFocus(false, false)
-    SendNUIMessage({ action = 'closePermissions', data = {} })
-end
-
-RegisterCommand('test_permissions', function()
-    local groups = { 'Street Furniture', 'Nature', 'Vehicles' }
-    local permissions = {
-        {
-            id         = 'perm_1',
-            identifier = 'license:a1b2c3d4e5f6a1b2c3d4e5f6',
-            name       = 'John Doe',
-            group      = 'Street Furniture',
-            area       = nil,
-        },
-        {
-            id         = 'perm_2',
-            identifier = 'license:f6e5d4c3b2a1f6e5d4c3b2a1',
-            name       = 'Jane Smith',
-            group      = 'Nature',
-            area       = {
-                center = { x = 215.4, y = -810.2, z = 29.7 },
-                radius = 100,
-            },
-        },
-    }
-    common.OpenPermissions(permissions, groups)
+RegisterCommand('manage_props', function()
+    lib.callback('ar_propmanager:getProps', false, function(payload)
+        if payload then
+            OpenPropManager(payload)
+        end
+    end)
 end, false)
 
 -- ─── Exports ──────────────────────────────────────────────────────────────────
 
 exports('OpenGizmo', function(entity, options)
-    common.OpenGizmo(entity, options)
+    OpenGizmo(entity, options)
 end)
 
 exports('OpenPropManager', function(propList)
-    common.OpenPropManager(propList)
+    OpenPropManager(propList)
 end)
 
 -- ─── Server → client events ───────────────────────────────────────────────────
@@ -437,23 +564,6 @@ RegisterNetEvent('ar_propmanager:syncPropList', function(payload)
 end)
 
 --- Server export OpenPropManagerForPlayer triggers this.
-RegisterNetEvent('ar_propmanager:openPropManagerFromServer', function(propList)
-    common.OpenPropManager(propList)
+RegisterNetEvent('ar_propmanager:openPropManagerFromServer', function(payload)
+    OpenPropManager(payload)
 end)
-
---- Server export OpenPermissionsForPlayer triggers this.
-RegisterNetEvent('ar_propmanager:openPlayerAccessFromServer', function(permList, groups)
-    common.OpenPermissions(permList, groups)
-end)
-
--- ─── Real prop manager command ────────────────────────────────────────────────
-
---- Fetches the prop list from the server and opens the manager.
---- Non-admins only see props in groups they have permission for.
-RegisterCommand('manage_props', function()
-    lib.callback('ar_propmanager:getProps', false, function(propList)
-        if propList then
-            common.OpenPropManager(propList)
-        end
-    end)
-end, false)

@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { usePropManagerStore } from '../stores/propmanager.store'
 import { useAddPropStore } from '../stores/addprop.store'
 
+const props = defineProps<{ canManage: boolean }>()
+
 const store = usePropManagerStore()
 const addPropStore = useAddPropStore()
 
@@ -46,7 +48,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
 <template>
   <div class="flex flex-col" @mousedown="cancelDelete">
     <!-- Toolbar -->
-    <div class="flex items-center justify-end border-b border-white/10 px-3 py-1.5">
+    <div v-if="props.canManage" class="flex items-center justify-end border-b border-white/10 px-3 py-1.5">
       <button
         class="flex items-center gap-1.5 rounded bg-blue-600/70 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-blue-500/80"
         @click.stop="addPropStore.isVisible = true"
@@ -161,8 +163,9 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
                 <i class="pi pi-eye text-xs" />
               </button>
 
-              <!-- Delete -->
+              <!-- Delete (manage only) -->
               <button
+                v-if="props.canManage"
                 class="rounded px-2 py-1 transition hover:bg-white/10"
                 :class="pendingDelete === prop.id ? 'text-red-400 hover:text-red-300' : 'text-slate-400 hover:text-slate-100'"
                 :title="pendingDelete === prop.id ? 'Click again to confirm delete' : 'Delete prop'"

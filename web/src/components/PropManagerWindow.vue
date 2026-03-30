@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useDraggable } from '@vueuse/core'
 import PropListWindow from './PropListWindow.vue'
 import PlayerAccessWindow from './PlayerAccessWindow.vue'
 import PropMapWindow from './PropMapWindow.vue'
-
 type Tab = 'props' | 'permissions' | 'map'
 
 const props = defineProps<{
   activeTab: Tab
+  level: number
 }>()
 
 const emit = defineEmits<{
@@ -29,11 +29,20 @@ const { style } = useDraggable(windowEl, {
   },
 })
 
-const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'props',       label: 'Props',         icon: 'pi-list'    },
-  { key: 'map',         label: 'Map',            icon: 'pi-map'     },
-  { key: 'permissions', label: 'Player Access',  icon: 'pi-users'   },
+const ALL_TABS: { key: Tab; label: string; icon: string }[] = [
+  { key: 'props',       label: 'Props',        icon: 'pi-list'  },
+  { key: 'map',         label: 'Map',           icon: 'pi-map'   },
+  { key: 'permissions', label: 'Player Access', icon: 'pi-users' },
 ]
+
+const visibleTabs = computed(() =>
+  ALL_TABS.filter((tab) => {
+    if (tab.key === 'props')       return props.level >= 1
+    if (tab.key === 'map')         return props.level >= 2
+    if (tab.key === 'permissions') return props.level >= 3
+    return false
+  })
+)
 </script>
 
 <template>
@@ -60,10 +69,10 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
         </button>
       </div>
 
-      <!-- Tab strip -->
-      <div class="flex border-b border-white/10 bg-white/3">
+      <!-- Tab strip (hidden when only one tab is visible) -->
+      <div v-if="visibleTabs.length > 1" class="flex border-b border-white/10 bg-white/3">
         <button
-          v-for="tab in TABS"
+          v-for="tab in visibleTabs"
           :key="tab.key"
           class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition"
           :class="activeTab === tab.key
@@ -78,7 +87,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 
       <!-- Tab content -->
       <div class="flex min-h-[50vh] flex-col">
-        <PropListWindow    v-if="activeTab === 'props'"       />
+        <PropListWindow    v-if="activeTab === 'props'"       :can-manage="level >= 2" />
         <PropMapWindow     v-else-if="activeTab === 'map'"    />
         <PlayerAccessWindow v-else                            />
       </div>

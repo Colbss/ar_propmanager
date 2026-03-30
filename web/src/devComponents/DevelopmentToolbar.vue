@@ -40,20 +40,25 @@ const testGizmo = () => {
   }, 50)
 }
 
-const testPropManager = () => {
-  const mockGroups = ['Street Furniture', 'Nature', 'Vehicles']
-  const mockModels = [
-    'prop_bench_01a', 'prop_tree_pine_01a', 'prop_streetlight_01',
-    'prop_barrier_01a', 'prop_bin_01a', 'prop_bollard_01',
-  ]
+const mockGroups = ['Street Furniture', 'Nature', 'Vehicles']
+const mockModels = [
+  'prop_bench_01a', 'prop_tree_pine_01a', 'prop_streetlight_01',
+  'prop_barrier_01a', 'prop_bin_01a', 'prop_bollard_01',
+]
+const mockGroupStates: Record<string, boolean> = {
+  'Street Furniture': true,
+  'Nature': false,
+  'Vehicles': true,
+}
+const mockPlayerAccess = [
+  { id: 'perm_1', identifier: 'license:a1b2c3d4e5f6a1b2c3d4', name: 'John Doe',   group: 'Street Furniture', area: null },
+  { id: 'perm_2', identifier: 'license:f6e5d4c3b2a1f6e5d4c3', name: 'Jane Smith', group: 'Nature',           area: { center: { x: 215.4, y: -810.2, z: 29.7 }, radius: 100 } },
+]
+
+function buildMockProps() {
   const now = Math.floor(Date.now() / 1000)
-  const mockExpiries = [
-    null,
-    now + 3600,   // expires in 1 hour
-    now + 86400,  // expires in 24 hours
-    now - 60,     // already expired
-  ]
-  const props = Array.from({ length: 12 }, (_, i) => ({
+  const mockExpiries = [null, now + 3600, now + 86400, now - 60]
+  return Array.from({ length: 12 }, (_, i) => ({
     id: `prop_${i}`,
     handle: i + 1,
     model: mockModels[i % mockModels.length],
@@ -63,19 +68,19 @@ const testPropManager = () => {
     renderDistance: 200,
     expiresAt: mockExpiries[i % mockExpiries.length],
   }))
-  const groupStates: Record<string, boolean> = {
-    'Street Furniture': true,
-    'Nature': false,
-    'Vehicles': true,
+}
+
+const testPropManager = (level: number) => {
+  const data: Record<string, any> = { level, props: buildMockProps(), groupStates: mockGroupStates }
+  if (level >= 3) {
+    data.playerAccess = mockPlayerAccess
+    data.groups = mockGroups
   }
-  debugData({ action: 'openPropManager', data: { props, groupStates } })
+  debugData({ action: 'openPropManager', data })
 }
 
 const items = [
-  {
-    label: 'Test Gizmo',
-    command: testGizmo
-  },
+  { label: 'Test Gizmo',                command: testGizmo },
   {
     label: 'Close Gizmo',
     command: () => {
@@ -85,43 +90,10 @@ const items = [
       pmStore.showOverlay = false
     }
   },
-  {
-    label: 'Test Prop Manager',
-    command: testPropManager
-  },
-  {
-    label: 'Close Prop Manager',
-    command: () => debugData({ action: 'closePropManager', data: {} })
-  },
-  {
-    label: 'Test Permissions',
-    command: () => debugData({
-      action: 'openPermissions',
-      data: {
-        groups: ['Street Furniture', 'Nature', 'Vehicles'],
-        permissions: [
-          {
-            id: 'perm_1',
-            identifier: 'license:a1b2c3d4e5f6a1b2c3d4',
-            name: 'John Doe',
-            group: 'Street Furniture',
-            area: null,
-          },
-          {
-            id: 'perm_2',
-            identifier: 'license:f6e5d4c3b2a1f6e5d4c3',
-            name: 'Jane Smith',
-            group: 'Nature',
-            area: { center: { x: 215.4, y: -810.2, z: 29.7 }, radius: 100 },
-          },
-        ],
-      },
-    })
-  },
-  {
-    label: 'Close Permissions',
-    command: () => debugData({ action: 'closePermissions', data: {} })
-  }
+  { label: 'Prop Manager — Level 1 (toggle groups)', command: () => testPropManager(1) },
+  { label: 'Prop Manager — Level 2 (manage)',         command: () => testPropManager(2) },
+  { label: 'Prop Manager — Level 3 (player access)',  command: () => testPropManager(3) },
+  { label: 'Close Prop Manager', command: () => debugData({ action: 'closePropManager', data: {} }) },
 ]
 </script>
 

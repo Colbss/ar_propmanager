@@ -2,16 +2,13 @@ local config = require 'config'
 
 -- ─── Utilities ────────────────────────────────────────────────────────────────
 
-local function canManage(source)
-    return IsPlayerAceAllowed(source, config.ace.manage)
-end
-
-local function canToggleGroups(source)
-    return IsPlayerAceAllowed(source, config.ace.toggleGroups)
-end
-
-local function canManagePlayerAccess(source)
-    return IsPlayerAceAllowed(source, config.ace.playerAccess)
+--- Returns the player's permission level (0 = none, 1 = toggleGroups, 2 = manage, 3 = playerAccess).
+--- Levels are cumulative — level 3 implies levels 1 and 2.
+local function getPlayerLevel(source)
+    if IsPlayerAceAllowed(source, config.ace[3]) then return 3 end
+    if IsPlayerAceAllowed(source, config.ace[2]) then return 2 end
+    if IsPlayerAceAllowed(source, config.ace[1]) then return 1 end
+    return 0
 end
 
 local function getIdentifier(source)
@@ -73,7 +70,7 @@ local function pointInZone(px, py, points)
 end
 
 local function hasPlayerAccess(source, group, position)
-    if canManage(source) then return true end
+    if getPlayerLevel(source) >= 2 then return true end
 
     local identifier = getIdentifier(source)
     if not identifier then return false end
@@ -320,7 +317,7 @@ end
 
 --- data: { group = string, enabled = bool }
 RegisterNetEvent('ar_propmanager:toggleGroup', function(data)
-    if not canToggleGroups(source) then return end
+    if getPlayerLevel(source) < 1 then return end
     setGroupEnabled(data.group, data.enabled)
 end)
 
@@ -488,7 +485,7 @@ end
 
 --- data: { identifier, name, group, area? }
 RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
-    if not canManagePlayerAccess(source) then return end
+    if getPlayerLevel(source) < 3 then return end
 
     local id = uuid()
     local areaType, ax, ay, az, aRadius, zoneJson = decomposeArea(data.area)
@@ -510,7 +507,7 @@ end)
 
 --- data: { id, identifier, name, group, area? }
 RegisterNetEvent('ar_propmanager:updatePlayerAccess', function(data)
-    if not canManagePlayerAccess(source) then return end
+    if getPlayerLevel(source) < 3 then return end
 
     local areaType, ax, ay, az, aRadius, zoneJson = decomposeArea(data.area)
     MySQL.query(
@@ -521,7 +518,7 @@ end)
 
 --- Receives the string id directly
 RegisterNetEvent('ar_propmanager:deletePlayerAccess', function(id)
-    if not canManagePlayerAccess(source) then return end
+    if getPlayerLevel(source) < 3 then return end
     MySQL.query('DELETE FROM `ar_player_access` WHERE id = ?', { id })
 end)
 
@@ -533,49 +530,7 @@ lib.callback.register('ar_propmanager:canInteractWithProp', function(source, pro
             return hasPlayerAccess(source, gName, group.props[propId].position)
         end
     end
-    return canManage(source)
-end)
-
---- Returns { props, groupStates } — filtered to accessible groups for non-admins.
-lib.callback.register('ar_propmanager:getProps', function(source)
-    if canManage(source) then
-        return buildSyncPayload()
-    end
-
-    local identifier = getIdentifier(source)
-    if not identifier then return { props = {}, groupStates = {} } end
-
-    local accessRows = MySQL.query.await(
-        'SELECT DISTINCT group_name FROM `ar_player_access` WHERE identifier = ?',
-        { identifier }
-    )
-
-    local allowed = {}
-    for _, row in ipairs(accessRows or {}) do allowed[row.group_name] = true end
-
-    local propList    = {}
-    local stateSubset = {}
-
-    for gName, group in pairs(groups) do
-        if allowed[gName] then
-            stateSubset[gName] = group.enabled
-            for dbId, prop in pairs(group.props) do
-                propList[#propList + 1] = {
-                    id             = dbId,
-                    netId          = prop.netId,
-                    handle         = prop.netId,
-                    model          = prop.model,
-                    position       = prop.position,
-                    group          = gName,
-                    outlined       = false,
-                    renderDistance = prop.renderDistance or 200,
-                    expiresAt      = prop.expiresAt,
-                }
-            end
-        end
-    end
-
-    return { props = propList, groupStates = stateSubset }
+    return getPlayerLevel(source) >= 2
 end)
 
 --- Converts a DB row's area columns into the AreaRestriction shape expected by the UI.
@@ -594,48 +549,97 @@ local function rowToArea(row)
     return nil
 end
 
---- Returns all player access entries. Requires playerAccess ace.
-lib.callback.register('ar_propmanager:getPlayerAccess', function(source)
-    if not canManagePlayerAccess(source) then return nil end
+--- Returns the full prop-manager payload, filtered by the caller's aces.
+--- Includes permissions flags, props/groups (if canManage or canToggleGroups),
+--- and player access entries (if canManage or canPlayerAccess).
+--- Builds a prop-manager payload for `source`.
+--- Returns nil if the player has no access at all.
+local function buildPlayerPayload(source)
+    local level = getPlayerLevel(source)
 
-    local rows = MySQL.query.await('SELECT * FROM `ar_player_access`')
-    local result = {}
-    for _, row in ipairs(rows or {}) do
-        result[#result + 1] = {
-            id         = row.id,
-            identifier = row.identifier,
-            name       = row.name,
-            group      = row.group_name,
-            area       = rowToArea(row),
-        }
+    -- No ace — check if they have explicit player-access rows
+    if level == 0 then
+        local identifier = getIdentifier(source)
+        if not identifier then return nil end
+
+        local accessRows = MySQL.query.await(
+            'SELECT DISTINCT group_name FROM `ar_player_access` WHERE identifier = ?',
+            { identifier }
+        )
+        if not accessRows or #accessRows == 0 then return nil end
+
+        -- Effective level 2, but only the groups they are assigned to
+        local allowed = {}
+        for _, row in ipairs(accessRows) do allowed[row.group_name] = true end
+
+        local propList  = {}
+        local stateSubset = {}
+        for gName, group in pairs(groups) do
+            if allowed[gName] then
+                stateSubset[gName] = group.enabled
+                for dbId, prop in pairs(group.props) do
+                    propList[#propList + 1] = {
+                        id             = dbId,
+                        netId          = prop.netId,
+                        handle         = prop.netId,
+                        model          = prop.model,
+                        position       = prop.position,
+                        group          = gName,
+                        outlined       = false,
+                        renderDistance = prop.renderDistance or 200,
+                        expiresAt      = prop.expiresAt,
+                    }
+                end
+            end
+        end
+
+        return { level = 2, props = propList, groupStates = stateSubset }
     end
-    return result
+
+    local payload = { level = level, props = {}, groupStates = {} }
+
+    if level >= 1 then
+        local sync = buildSyncPayload()
+        payload.props       = sync.props
+        payload.groupStates = sync.groupStates
+    end
+
+    if level >= 3 then
+        local rows = MySQL.query.await('SELECT * FROM `ar_player_access`')
+        local entries = {}
+        for _, row in ipairs(rows or {}) do
+            entries[#entries + 1] = {
+                id         = row.id,
+                identifier = row.identifier,
+                name       = row.name,
+                group      = row.group_name,
+                area       = rowToArea(row),
+            }
+        end
+        payload.playerAccess = entries
+
+        local groupNames = {}
+        for name in pairs(groups) do groupNames[#groupNames + 1] = name end
+        payload.groups = groupNames
+    end
+
+    return payload
+end
+
+lib.callback.register('ar_propmanager:getProps', function(source)
+    return buildPlayerPayload(source)
 end)
 
 -- ─── Exports ─────────────────────────────────────────────────────────────────
 
-exports('GetProps',        buildPropList)
+exports('GetProps',         buildPropList)
 exports('GetGroupStates',  buildGroupStates)
 exports('SetGroupEnabled', setGroupEnabled)
 exports('HasPlayerAccess', hasPlayerAccess)
+exports('GetPlayerLevel',  getPlayerLevel)
 
 exports('OpenPropManagerForPlayer', function(playerId)
-    local payload = canManage(playerId) and buildSyncPayload() or { props = {}, groupStates = {} }
+    local payload = buildPlayerPayload(playerId)
+    if not payload then return end
     TriggerClientEvent('ar_propmanager:openPropManagerFromServer', playerId, payload)
-end)
-
-exports('OpenPlayerAccessForPlayer', function(playerId, groupList)
-    if not canManagePlayerAccess(playerId) then return end
-    local rows = MySQL.query.await('SELECT * FROM `ar_player_access`')
-    local result = {}
-    for _, row in ipairs(rows or {}) do
-        result[#result + 1] = {
-            id         = row.id,
-            identifier = row.identifier,
-            name       = row.name,
-            group      = row.group_name,
-            area       = rowToArea(row),
-        }
-    end
-    TriggerClientEvent('ar_propmanager:openPlayerAccessFromServer', playerId, result, groupList or {})
 end)
