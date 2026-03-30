@@ -11,7 +11,7 @@ local originalQuat = nil
 --- @param entity  number  Entity handle
 --- @param options table   Optional: { restrictRotationAxes, attachingProp, simpleOverlay, group, dbId, model }
 function common.OpenGizmo(entity, options)
-    assert(DoesEntityExist(entity), 'ar_propmanager2: entity does not exist')
+    assert(DoesEntityExist(entity), 'ar_propmanager: entity does not exist')
     options = options or {}
     currentGizmoOptions = options
 
@@ -164,7 +164,7 @@ RegisterNUICallback('Finish', function(_, cb)
         local qx, qy, qz, qw = GetEntityQuaternion(currentGizmoEntity)
         local opts            = currentGizmoOptions or {}
 
-        TriggerServerEvent('ar_propmanager2:saveProp', {
+        TriggerServerEvent('ar_propmanager:saveProp', {
             id             = opts.dbId,
             netId          = NetworkGetNetworkIdFromEntity(currentGizmoEntity),
             model          = opts.model or tostring(GetEntityModel(currentGizmoEntity)),
@@ -267,7 +267,7 @@ end)
 -- ─── Prop Manager NUI Callbacks ──────────────────────────────────────────────
 
 RegisterNUICallback('TeleportToProp', function(data, cb)
-    lib.callback('ar_propmanager2:canInteractWithProp', false, function(allowed)
+    lib.callback('ar_propmanager:canInteractWithProp', false, function(allowed)
         if not allowed then cb('denied') return end
         local entity = NetworkGetEntityFromNetworkId(data.netId or data.id) or data.handle
         if not entity or not DoesEntityExist(entity) then cb('error') return end
@@ -290,12 +290,12 @@ RegisterNUICallback('OutlineAllProps', function(data, cb)
 end)
 
 RegisterNUICallback('DeleteProp', function(data, cb)
-    TriggerServerEvent('ar_propmanager2:deleteProp', { id = data.id })
+    TriggerServerEvent('ar_propmanager:deleteProp', { id = data.id })
     cb('ok')
 end)
 
 RegisterNUICallback('ToggleGroup', function(data, cb)
-    TriggerServerEvent('ar_propmanager2:toggleGroup', { group = data.group, enabled = data.enabled })
+    TriggerServerEvent('ar_propmanager:toggleGroup', { group = data.group, enabled = data.enabled })
     cb('ok')
 end)
 
@@ -359,17 +359,17 @@ end, false)
 -- ─── Player access NUI Callbacks ─────────────────────────────────────────────
 
 RegisterNUICallback('AddPlayerAccess', function(data, cb)
-    TriggerServerEvent('ar_propmanager2:addPlayerAccess', data)
+    TriggerServerEvent('ar_propmanager:addPlayerAccess', data)
     cb('ok')
 end)
 
 RegisterNUICallback('UpdatePlayerAccess', function(data, cb)
-    TriggerServerEvent('ar_propmanager2:updatePlayerAccess', data)
+    TriggerServerEvent('ar_propmanager:updatePlayerAccess', data)
     cb('ok')
 end)
 
 RegisterNUICallback('DeletePlayerAccess', function(data, cb)
-    TriggerServerEvent('ar_propmanager2:deletePlayerAccess', data.id)
+    TriggerServerEvent('ar_propmanager:deletePlayerAccess', data.id)
     cb('ok')
 end)
 
@@ -432,17 +432,17 @@ end)
 
 --- Broadcast from server whenever the prop list or group states change.
 --- Refreshes the UI if the prop manager window is currently open.
-RegisterNetEvent('ar_propmanager2:syncPropList', function(payload)
+RegisterNetEvent('ar_propmanager:syncPropList', function(payload)
     SendNUIMessage({ action = 'updatePropList', data = payload })
 end)
 
 --- Server export OpenPropManagerForPlayer triggers this.
-RegisterNetEvent('ar_propmanager2:openPropManagerFromServer', function(propList)
+RegisterNetEvent('ar_propmanager:openPropManagerFromServer', function(propList)
     common.OpenPropManager(propList)
 end)
 
 --- Server export OpenPermissionsForPlayer triggers this.
-RegisterNetEvent('ar_propmanager2:openPlayerAccessFromServer', function(permList, groups)
+RegisterNetEvent('ar_propmanager:openPlayerAccessFromServer', function(permList, groups)
     common.OpenPermissions(permList, groups)
 end)
 
@@ -451,7 +451,7 @@ end)
 --- Fetches the prop list from the server and opens the manager.
 --- Non-admins only see props in groups they have permission for.
 RegisterCommand('manage_props', function()
-    lib.callback('ar_propmanager2:getProps', false, function(propList)
+    lib.callback('ar_propmanager:getProps', false, function(propList)
         if propList then
             common.OpenPropManager(propList)
         end

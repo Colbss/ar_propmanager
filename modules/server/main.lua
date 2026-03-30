@@ -228,7 +228,7 @@ local function buildSyncPayload()
 end
 
 local function broadcastSync()
-    TriggerClientEvent('ar_propmanager2:syncPropList', -1, buildSyncPayload())
+    TriggerClientEvent('ar_propmanager:syncPropList', -1, buildSyncPayload())
 end
 
 -- ─── Startup ─────────────────────────────────────────────────────────────────
@@ -272,7 +272,7 @@ local function loadData()
         group.props[row.id] = propData
     end
 
-    print(('[ar_propmanager2] Loaded %d prop(s) — %d spawned, %d in disabled groups')
+    print(('[ar_propmanager] Loaded %d prop(s) — %d spawned, %d in disabled groups')
         :format(#(propRows or {}), spawned, skipped))
 end
 
@@ -319,7 +319,7 @@ local function setGroupEnabled(groupName, enabled)
 end
 
 --- data: { group = string, enabled = bool }
-RegisterNetEvent('ar_propmanager2:toggleGroup', function(data)
+RegisterNetEvent('ar_propmanager:toggleGroup', function(data)
     if not canToggleGroups(source) then return end
     setGroupEnabled(data.group, data.enabled)
 end)
@@ -327,13 +327,13 @@ end)
 -- ─── Prop events ─────────────────────────────────────────────────────────────
 
 --- data: { id?, netId, model, position, quaternion, group }
-RegisterNetEvent('ar_propmanager2:saveProp', function(data)
+RegisterNetEvent('ar_propmanager:saveProp', function(data)
     local src  = source
     local pos  = data.position
     local quat = data.quaternion or { x = 0, y = 0, z = 0, w = 1 }
 
     if not hasPlayerAccess(src, data.group, pos) then
-        print(('[ar_propmanager2] saveProp denied — player %s, group: %s'):format(src, data.group))
+        print(('[ar_propmanager] saveProp denied — player %s, group: %s'):format(src, data.group))
         return
     end
 
@@ -409,7 +409,7 @@ RegisterNetEvent('ar_propmanager2:saveProp', function(data)
 end)
 
 --- data: { id }
-RegisterNetEvent('ar_propmanager2:deleteProp', function(data)
+RegisterNetEvent('ar_propmanager:deleteProp', function(data)
     local src = source
 
     local targetGroupName, propData
@@ -423,7 +423,7 @@ RegisterNetEvent('ar_propmanager2:deleteProp', function(data)
     if not propData then return end
 
     if not hasPlayerAccess(src, targetGroupName, propData.position) then
-        print(('[ar_propmanager2] deleteProp denied — player %s'):format(src))
+        print(('[ar_propmanager] deleteProp denied — player %s'):format(src))
         return
     end
 
@@ -454,7 +454,7 @@ local function checkExpiredProps()
     for _, entry in ipairs(expired) do
         despawnProp(entry.prop)
         groups[entry.groupName].props[entry.dbId] = nil
-        print(('[ar_propmanager2] Expired prop removed — id: %s, model: %s, group: %s')
+        print(('[ar_propmanager] Expired prop removed — id: %s, model: %s, group: %s')
             :format(entry.dbId, entry.prop.model, entry.groupName))
     end
 
@@ -487,7 +487,7 @@ local function decomposeArea(area)
 end
 
 --- data: { identifier, name, group, area? }
-RegisterNetEvent('ar_propmanager2:addPlayerAccess', function(data)
+RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
     if not canManagePlayerAccess(source) then return end
 
     local id = uuid()
@@ -499,7 +499,7 @@ RegisterNetEvent('ar_propmanager2:addPlayerAccess', function(data)
     )
 
     -- Return confirmed record so UI can swap the optimistic temp id
-    TriggerClientEvent('ar_propmanager2:playerAccessSaved', source, {
+    TriggerClientEvent('ar_propmanager:playerAccessSaved', source, {
         id         = id,
         identifier = data.identifier,
         name       = data.name,
@@ -509,7 +509,7 @@ RegisterNetEvent('ar_propmanager2:addPlayerAccess', function(data)
 end)
 
 --- data: { id, identifier, name, group, area? }
-RegisterNetEvent('ar_propmanager2:updatePlayerAccess', function(data)
+RegisterNetEvent('ar_propmanager:updatePlayerAccess', function(data)
     if not canManagePlayerAccess(source) then return end
 
     local areaType, ax, ay, az, aRadius, zoneJson = decomposeArea(data.area)
@@ -520,14 +520,14 @@ RegisterNetEvent('ar_propmanager2:updatePlayerAccess', function(data)
 end)
 
 --- Receives the string id directly
-RegisterNetEvent('ar_propmanager2:deletePlayerAccess', function(id)
+RegisterNetEvent('ar_propmanager:deletePlayerAccess', function(id)
     if not canManagePlayerAccess(source) then return end
     MySQL.query('DELETE FROM `ar_player_access` WHERE id = ?', { id })
 end)
 
 -- ─── Server callbacks ─────────────────────────────────────────────────────────
 
-lib.callback.register('ar_propmanager2:canInteractWithProp', function(source, propId)
+lib.callback.register('ar_propmanager:canInteractWithProp', function(source, propId)
     for gName, group in pairs(groups) do
         if group.props[propId] then
             return hasPlayerAccess(source, gName, group.props[propId].position)
@@ -537,7 +537,7 @@ lib.callback.register('ar_propmanager2:canInteractWithProp', function(source, pr
 end)
 
 --- Returns { props, groupStates } — filtered to accessible groups for non-admins.
-lib.callback.register('ar_propmanager2:getProps', function(source)
+lib.callback.register('ar_propmanager:getProps', function(source)
     if canManage(source) then
         return buildSyncPayload()
     end
@@ -595,7 +595,7 @@ local function rowToArea(row)
 end
 
 --- Returns all player access entries. Requires playerAccess ace.
-lib.callback.register('ar_propmanager2:getPlayerAccess', function(source)
+lib.callback.register('ar_propmanager:getPlayerAccess', function(source)
     if not canManagePlayerAccess(source) then return nil end
 
     local rows = MySQL.query.await('SELECT * FROM `ar_player_access`')
@@ -621,7 +621,7 @@ exports('HasPlayerAccess', hasPlayerAccess)
 
 exports('OpenPropManagerForPlayer', function(playerId)
     local payload = canManage(playerId) and buildSyncPayload() or { props = {}, groupStates = {} }
-    TriggerClientEvent('ar_propmanager2:openPropManagerFromServer', playerId, payload)
+    TriggerClientEvent('ar_propmanager:openPropManagerFromServer', playerId, payload)
 end)
 
 exports('OpenPlayerAccessForPlayer', function(playerId, groupList)
@@ -637,5 +637,5 @@ exports('OpenPlayerAccessForPlayer', function(playerId, groupList)
             area       = rowToArea(row),
         }
     end
-    TriggerClientEvent('ar_propmanager2:openPlayerAccessFromServer', playerId, result, groupList or {})
+    TriggerClientEvent('ar_propmanager:openPlayerAccessFromServer', playerId, result, groupList or {})
 end)
