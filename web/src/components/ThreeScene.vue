@@ -39,7 +39,7 @@ function initThree() {
 
   transformControls = new TransformControls(camera, renderer.domElement)
   transformControls.setSize(0.5)
-  scene.add(transformControls)
+  scene.add(transformControls as unknown as THREE.Object3D)
 
   transformControls.addEventListener('objectChange', handleObjectChange)
 
