@@ -59,10 +59,10 @@ function buildMockProps() {
   const now = Math.floor(Date.now() / 1000)
   const mockExpiries = [null, now + 3600, now + 86400, now - 60]
   return Array.from({ length: 12 }, (_, i) => ({
-    id: `prop_${i}`,
-    handle: i + 1,
+    id: i + 1,
     model: mockModels[i % mockModels.length],
     position: { x: +(100 + i * 30).toFixed(1), y: +(200 + i * 1.2).toFixed(1), z: +(28 + (i % 4) * 0.5).toFixed(1) },
+    quaternion: { x: 0, y: 0, z: 0, w: 1 },
     group: mockGroups[i % mockGroups.length],
     outlined: false,
     renderDistance: 200,

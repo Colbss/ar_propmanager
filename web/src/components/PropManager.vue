@@ -38,10 +38,27 @@ useNuiEvent<OpenPropManagerPayload>('openPropManager', (data) => {
   windowVisible.value = true
 })
 
-useNuiEvent<{ props: PropEntry[]; groupStates: Record<string, boolean> }>('updatePropList', (data) => {
-  propStore.props = (data.props ?? []).map((p) => ({ ...p, outlined: p.outlined ?? false }))
-  propStore.groupStates = data.groupStates ?? {}
-  propStore.applyGroupDefaults(propStore.groupStates)
+useNuiEvent<PropEntry>('addProp', (prop) => {
+  if (!propStore.props.find((p) => p.id === prop.id)) {
+    propStore.props.push({ ...prop, outlined: false })
+  }
+})
+
+useNuiEvent<PropEntry>('updateProp', (prop) => {
+  const idx = propStore.props.findIndex((p) => p.id === prop.id)
+  if (idx !== -1) {
+    propStore.props[idx] = { ...prop, outlined: propStore.props[idx].outlined }
+  }
+})
+
+useNuiEvent<{ ids: number[] }>('removeProps', ({ ids }) => {
+  const set = new Set(ids)
+  propStore.props = propStore.props.filter((p) => !set.has(p.id))
+})
+
+useNuiEvent<Record<string, boolean>>('updateGroupStates', (groupStates) => {
+  propStore.groupStates = groupStates
+  propStore.applyGroupDefaults(groupStates)
 })
 
 useNuiEvent('closePropManager', () => {

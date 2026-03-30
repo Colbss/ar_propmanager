@@ -160,13 +160,118 @@ function keybinds.GetKeybinds()
     }
 end
 
--- ─── State ────────────────────────────────────────────────────────────────────
+-- ─── Gizmo state ─────────────────────────────────────────────────────────────
 
 local gizmoActive = false
 local currentGizmoEntity = nil
 local currentGizmoOptions = nil
 local originalCoords = nil
 local originalQuat = nil
+
+-- ─── Spawn state ─────────────────────────────────────────────────────────────
+
+-- propCache     : [id] = { model, position, quaternion, renderDistance, group, expiresAt }
+-- groupEnabled  : [groupName] = bool
+-- spawnedProps  : [id] = entity handle
+-- pendingSpawn  : [id] = bool  (loading model, not yet spawned)
+
+local propCache    = {}
+local groupEnabled = {}
+local spawnedProps = {}
+local pendingSpawn = {}
+
+local function despawnPropLocal(id)
+    pendingSpawn[id] = nil
+    local entity = spawnedProps[id]
+    if entity and DoesEntityExist(entity) then
+        DeleteEntity(entity)
+    end
+    spawnedProps[id] = nil
+end
+
+local function applySpawnPayload(payload)
+    if payload.groupStates then
+        for name, enabled in pairs(payload.groupStates) do
+            groupEnabled[name] = enabled
+        end
+    end
+
+    local newIds = {}
+    for _, prop in ipairs(payload.props or {}) do
+        newIds[prop.id] = true
+        local existing = propCache[prop.id]
+        propCache[prop.id] = {
+            model          = prop.model,
+            position       = prop.position,
+            quaternion     = prop.quaternion,
+            renderDistance = prop.renderDistance or 200,
+            group          = prop.group,
+            expiresAt      = prop.expiresAt,
+        }
+        -- Update coords of already-spawned entities in-place
+        if existing and spawnedProps[prop.id] and DoesEntityExist(spawnedProps[prop.id]) then
+            local e = spawnedProps[prop.id]
+            local q = prop.quaternion or { x = 0, y = 0, z = 0, w = 1 }
+            SetEntityCoords(e, prop.position.x, prop.position.y, prop.position.z, false, false, false, false)
+            SetEntityQuaternion(e, q.x, q.y, q.z, q.w)
+        end
+    end
+
+    -- Remove props no longer in the list
+    for id in pairs(propCache) do
+        if not newIds[id] then
+            despawnPropLocal(id)
+            propCache[id] = nil
+        end
+    end
+end
+
+-- Spawns/despawns props based on player distance and group enabled state.
+CreateThread(function()
+    while true do
+        Wait(1000)
+        local playerPos = GetEntityCoords(PlayerPedId())
+
+        for id, prop in pairs(propCache) do
+            local dist        = #(vector3(prop.position.x, prop.position.y, prop.position.z) - playerPos)
+            local shouldSpawn = dist <= (prop.renderDistance or 200) and (groupEnabled[prop.group] ~= false)
+
+            if shouldSpawn and not spawnedProps[id] and not pendingSpawn[id] then
+                pendingSpawn[id] = true
+                local capturedId   = id
+                local capturedProp = prop
+                CreateThread(function()
+                    local hash = GetHashKey(capturedProp.model)
+                    RequestModel(hash)
+                    local t = 0
+                    while not HasModelLoaded(hash) and t < 100 do Wait(10); t = t + 1 end
+                    if HasModelLoaded(hash) and propCache[capturedId] and pendingSpawn[capturedId] then
+                        local q      = capturedProp.quaternion or { x = 0, y = 0, z = 0, w = 1 }
+                        local entity = CreateObjectNoOffset(
+                            hash,
+                            capturedProp.position.x, capturedProp.position.y, capturedProp.position.z,
+                            false, false, false
+                        )
+                        SetEntityQuaternion(entity, q.x, q.y, q.z, q.w)
+                        FreezeEntityPosition(entity, true)
+                        SetModelAsNoLongerNeeded(hash)
+                        spawnedProps[capturedId] = entity
+                    end
+                    pendingSpawn[capturedId] = nil
+                end)
+            elseif not shouldSpawn and spawnedProps[id] then
+                despawnPropLocal(id)
+            end
+        end
+    end
+end)
+
+AddEventHandler('onClientResourceStart', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+    lib.callback('ar_propmanager:getSpawnData', false, function(payload)
+        if payload then applySpawnPayload(payload) end
+    end)
+end)
 
 -- ─── Gizmo ────────────────────────────────────────────────────────────────────
 
@@ -329,7 +434,6 @@ RegisterNUICallback('Finish', function(_, cb)
 
         TriggerServerEvent('ar_propmanager:saveProp', {
             id             = opts.dbId,
-            netId          = NetworkGetNetworkIdFromEntity(currentGizmoEntity),
             model          = opts.model or tostring(GetEntityModel(currentGizmoEntity)),
             position       = { x = pos.x, y = pos.y, z = pos.z },
             quaternion     = { x = qx, y = qy, z = qz, w = qw },
@@ -337,6 +441,13 @@ RegisterNUICallback('Finish', function(_, cb)
             renderDistance = opts.renderDistance or 200,
             expiresAt      = opts.expiresAt,
         })
+
+        -- For new props, delete the temp entity — the server will broadcast it
+        -- back via syncPropList and the spawn manager will re-create it.
+        if not opts.dbId then
+            DeleteEntity(currentGizmoEntity)
+            currentGizmoEntity = nil
+        end
     end
     CloseGizmo(true)
     cb('ok')
@@ -376,12 +487,12 @@ RegisterNUICallback('PlaceProp', function(data, cb)
     local pos     = GetEntityCoords(ped)
     local heading = GetEntityHeading(ped)
 
-    local prop = CreateObject(
+    local prop = CreateObjectNoOffset(
         modelHash,
         pos.x + math.sin(math.rad(-heading)) * 3.0,
         pos.y + math.cos(math.rad(-heading)) * 3.0,
         pos.z,
-        true, true, false
+        false, false, false
     )
 
     SetModelAsNoLongerNeeded(modelHash)
@@ -414,9 +525,9 @@ end
 RegisterNUICallback('TeleportToProp', function(data, cb)
     lib.callback('ar_propmanager:canInteractWithProp', false, function(allowed)
         if not allowed then cb('denied') return end
-        local entity = NetworkGetEntityFromNetworkId(data.netId or data.id) or data.handle
-        if not entity or not DoesEntityExist(entity) then cb('error') return end
-        local pos = GetEntityCoords(entity)
+        local prop = propCache[data.id]
+        if not prop then cb('error') return end
+        local pos = prop.position
         SetEntityCoords(PlayerPedId(), pos.x, pos.y, pos.z + 1.0, false, false, false, false)
         cb('ok')
     end, data.id)
@@ -517,8 +628,7 @@ RegisterCommand('test_prop_manager', function()
             local pos = GetEntityCoords(obj)
             count = count + 1
             propList[#propList + 1] = {
-                id             = tostring(obj),
-                handle         = obj,
+                id             = obj,
                 model          = tostring(GetEntityModel(obj)),
                 position       = { x = pos.x, y = pos.y, z = pos.z },
                 group          = mockGroups[(count % #mockGroups) + 1],
@@ -557,10 +667,51 @@ end)
 
 -- ─── Server → client events ───────────────────────────────────────────────────
 
---- Broadcast from server whenever the prop list or group states change.
---- Refreshes the UI if the prop manager window is currently open.
-RegisterNetEvent('ar_propmanager:syncPropList', function(payload)
-    SendNUIMessage({ action = 'updatePropList', data = payload })
+RegisterNetEvent('ar_propmanager:propAdded', function(prop)
+    if groupEnabled[prop.group] == nil then groupEnabled[prop.group] = true end
+    propCache[prop.id] = {
+        model          = prop.model,
+        position       = prop.position,
+        quaternion     = prop.quaternion,
+        renderDistance = prop.renderDistance or 200,
+        group          = prop.group,
+        expiresAt      = prop.expiresAt,
+    }
+    SendNUIMessage({ action = 'addProp', data = prop })
+end)
+
+RegisterNetEvent('ar_propmanager:propUpdated', function(prop)
+    local cached = propCache[prop.id]
+    propCache[prop.id] = {
+        model          = prop.model,
+        position       = prop.position,
+        quaternion     = prop.quaternion,
+        renderDistance = prop.renderDistance or 200,
+        group          = prop.group,
+        expiresAt      = prop.expiresAt,
+    }
+    if cached and spawnedProps[prop.id] and DoesEntityExist(spawnedProps[prop.id]) then
+        local e = spawnedProps[prop.id]
+        local q = prop.quaternion or { x = 0, y = 0, z = 0, w = 1 }
+        SetEntityCoords(e, prop.position.x, prop.position.y, prop.position.z, false, false, false, false)
+        SetEntityQuaternion(e, q.x, q.y, q.z, q.w)
+    end
+    SendNUIMessage({ action = 'updateProp', data = prop })
+end)
+
+RegisterNetEvent('ar_propmanager:propsRemoved', function(ids)
+    for _, id in ipairs(ids) do
+        despawnPropLocal(id)
+        propCache[id] = nil
+    end
+    SendNUIMessage({ action = 'removeProps', data = { ids = ids } })
+end)
+
+RegisterNetEvent('ar_propmanager:groupStatesChanged', function(groupStates)
+    for name, enabled in pairs(groupStates) do
+        groupEnabled[name] = enabled
+    end
+    SendNUIMessage({ action = 'updateGroupStates', data = groupStates })
 end)
 
 --- Server export OpenPropManagerForPlayer triggers this.

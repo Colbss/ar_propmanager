@@ -15,13 +15,6 @@ local function getIdentifier(source)
     return GetPlayerIdentifierByType(source, 'license')
 end
 
-local function uuid()
-    return ('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'):gsub('[xy]', function(c)
-        local v = c == 'x' and math.random(0, 0xf) or math.random(8, 0xb)
-        return ('%x'):format(v)
-    end)
-end
-
 -- ─── Runtime state ───────────────────────────────────────────────────────────
 --
 -- All props are indexed by group for O(1) group-level operations (toggle).
@@ -30,11 +23,11 @@ end
 --       enabled = bool,
 --       props   = {
 --           [dbId] = {
---               model    = string,
---               position = { x, y, z },
---               quat     = { x, y, z, w },
---               entity   = number | nil,   -- nil when group is disabled
---               netId    = number | nil,
+--               model          = string,
+--               position       = { x, y, z },
+--               quat           = { x, y, z, w },
+--               renderDistance = number,
+--               expiresAt      = number | nil,
 --           }
 --       }
 --   }
@@ -113,18 +106,16 @@ end
 local function createTables()
     MySQL.query([[
         CREATE TABLE IF NOT EXISTS `ar_props` (
-            `id`         VARCHAR(36) NOT NULL,
-            `model`      VARCHAR(64) NOT NULL,
-            `pos_x`      FLOAT       NOT NULL,
-            `pos_y`      FLOAT       NOT NULL,
-            `pos_z`      FLOAT       NOT NULL,
-            `quat_x`     FLOAT       NOT NULL DEFAULT 0,
-            `quat_y`     FLOAT       NOT NULL DEFAULT 0,
-            `quat_z`     FLOAT       NOT NULL DEFAULT 0,
-            `quat_w`     FLOAT       NOT NULL DEFAULT 1,
+            `id`              INT         NOT NULL AUTO_INCREMENT,
+            `model`           VARCHAR(64) NOT NULL,
+            `pos_x`           FLOAT       NOT NULL,
+            `pos_y`           FLOAT       NOT NULL,
+            `pos_z`           FLOAT       NOT NULL,
+            `quat_x`          FLOAT       NOT NULL DEFAULT 0,
+            `quat_y`          FLOAT       NOT NULL DEFAULT 0,
+            `quat_z`          FLOAT       NOT NULL DEFAULT 0,
+            `quat_w`          FLOAT       NOT NULL DEFAULT 1,
             `group_name`      VARCHAR(64) NOT NULL,
-            `placed_by`       VARCHAR(64) NOT NULL,
-            `placed_at`       TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
             `render_distance` FLOAT       NOT NULL DEFAULT 200,
             `expires_at`      BIGINT      NULL,
             PRIMARY KEY (`id`),
@@ -142,7 +133,7 @@ local function createTables()
 
     MySQL.query([[
         CREATE TABLE IF NOT EXISTS `ar_player_access` (
-            `id`          VARCHAR(36)           NOT NULL,
+            `id`          INT                   NOT NULL AUTO_INCREMENT,
             `identifier`  VARCHAR(64)           NOT NULL,
             `name`        VARCHAR(64)           NOT NULL,
             `groups`      JSON                  NOT NULL,
@@ -157,24 +148,6 @@ local function createTables()
         )
     ]])
 
-end
-
--- ─── Entity helpers ───────────────────────────────────────────────────────────
-
-local function spawnEntity(model, x, y, z, qx, qy, qz, qw)
-    local entity = CreateObject(GetHashKey(model), x, y, z, true, true, false)
-    if not entity or entity == 0 then return nil, nil end
-    SetEntityQuaternion(entity, qx, qy, qz, qw)
-    FreezeEntityPosition(entity, true)
-    return entity, ObjToNet(entity)
-end
-
-local function despawnProp(propData)
-    if propData.entity and DoesEntityExist(propData.entity) then
-        DeleteEntity(propData.entity)
-    end
-    propData.entity = nil
-    propData.netId  = nil
 end
 
 -- ─── Payload builders ─────────────────────────────────────────────────────────
@@ -193,10 +166,9 @@ local function buildPropList()
         for dbId, prop in pairs(group.props) do
             list[#list + 1] = {
                 id             = dbId,
-                netId          = prop.netId,
-                handle         = prop.netId,
                 model          = prop.model,
                 position       = prop.position,
+                quaternion     = prop.quat,
                 group          = groupName,
                 outlined       = false,
                 renderDistance = prop.renderDistance or 200,
@@ -211,8 +183,33 @@ local function buildSyncPayload()
     return { props = buildPropList(), groupStates = buildGroupStates() }
 end
 
-local function broadcastSync()
-    TriggerClientEvent('ar_propmanager:syncPropList', -1, buildSyncPayload())
+local function buildPropEntry(id, prop, groupName)
+    return {
+        id             = id,
+        model          = prop.model,
+        position       = prop.position,
+        quaternion     = prop.quat,
+        group          = groupName,
+        outlined       = false,
+        renderDistance = prop.renderDistance or 200,
+        expiresAt      = prop.expiresAt,
+    }
+end
+
+local function broadcastPropAdded(id, prop, groupName)
+    TriggerClientEvent('ar_propmanager:propAdded', -1, buildPropEntry(id, prop, groupName))
+end
+
+local function broadcastPropUpdated(id, prop, groupName)
+    TriggerClientEvent('ar_propmanager:propUpdated', -1, buildPropEntry(id, prop, groupName))
+end
+
+local function broadcastPropsRemoved(ids)
+    TriggerClientEvent('ar_propmanager:propsRemoved', -1, ids)
+end
+
+local function broadcastGroupStates()
+    TriggerClientEvent('ar_propmanager:groupStatesChanged', -1, buildGroupStates())
 end
 
 -- ─── Startup ─────────────────────────────────────────────────────────────────
@@ -223,41 +220,19 @@ local function loadData()
         getOrCreateGroup(row.group_name, row.enabled == 1)
     end
 
-    local propRows  = MySQL.query.await('SELECT * FROM `ar_props`')
-    local spawned, skipped = 0, 0
-
+    local propRows = MySQL.query.await('SELECT * FROM `ar_props`')
     for _, row in ipairs(propRows or {}) do
-        local group    = getOrCreateGroup(row.group_name)
-        local propData = {
+        local group = getOrCreateGroup(row.group_name)
+        group.props[row.id] = {
             model          = row.model,
             position       = { x = row.pos_x, y = row.pos_y, z = row.pos_z },
             quat           = { x = row.quat_x, y = row.quat_y, z = row.quat_z, w = row.quat_w },
             renderDistance = row.render_distance or 200,
             expiresAt      = row.expires_at,
-            entity         = nil,
-            netId          = nil,
         }
-
-        if group.enabled then
-            local entity, netId = spawnEntity(
-                row.model,
-                row.pos_x, row.pos_y, row.pos_z,
-                row.quat_x, row.quat_y, row.quat_z, row.quat_w
-            )
-            if entity then
-                propData.entity = entity
-                propData.netId  = netId
-                spawned = spawned + 1
-            end
-        else
-            skipped = skipped + 1
-        end
-
-        group.props[row.id] = propData
     end
 
-    print(('[ar_propmanager] Loaded %d prop(s) — %d spawned, %d in disabled groups')
-        :format(#(propRows or {}), spawned, skipped))
+    print(('[ar_propmanager] Loaded %d prop(s)'):format(#(propRows or {})))
 end
 
 MySQL.ready(function()
@@ -276,30 +251,12 @@ local function setGroupEnabled(groupName, enabled)
 
     group.enabled = enabled
 
-    for _, propData in pairs(group.props) do
-        if enabled then
-            local pos  = propData.position
-            local quat = propData.quat
-            local entity, netId = spawnEntity(
-                propData.model,
-                pos.x, pos.y, pos.z,
-                quat.x, quat.y, quat.z, quat.w
-            )
-            if entity then
-                propData.entity = entity
-                propData.netId  = netId
-            end
-        else
-            despawnProp(propData)
-        end
-    end
-
     MySQL.query(
         'INSERT INTO `ar_prop_groups` (group_name, enabled) VALUES (?, ?) ON DUPLICATE KEY UPDATE enabled = ?',
         { groupName, enabled and 1 or 0, enabled and 1 or 0 }
     )
 
-    broadcastSync()
+    broadcastGroupStates()
 end
 
 --- data: { group = string, enabled = bool }
@@ -310,7 +267,7 @@ end)
 
 -- ─── Prop events ─────────────────────────────────────────────────────────────
 
---- data: { id?, netId, model, position, quaternion, group }
+--- data: { id?, model, position, quaternion, group }
 RegisterNetEvent('ar_propmanager:saveProp', function(data)
     local src  = source
     local pos  = data.position
@@ -333,20 +290,14 @@ RegisterNetEvent('ar_propmanager:saveProp', function(data)
         propData.renderDistance = data.renderDistance or propData.renderDistance or 200
         propData.expiresAt      = data.expiresAt
 
-        if propData.entity and DoesEntityExist(propData.entity) then
-            SetEntityCoords(propData.entity, pos.x, pos.y, pos.z, false, false, false, false)
-            SetEntityQuaternion(propData.entity, quat.x, quat.y, quat.z, quat.w)
-        end
-
         MySQL.query(
             'UPDATE `ar_props` SET pos_x=?,pos_y=?,pos_z=?,quat_x=?,quat_y=?,quat_z=?,quat_w=?,render_distance=?,expires_at=? WHERE id=?',
             { pos.x, pos.y, pos.z, quat.x, quat.y, quat.z, quat.w, propData.renderDistance, propData.expiresAt, data.id }
         )
+        broadcastPropUpdated(data.id, propData, data.group)
     else
         -- ── New prop ──────────────────────────────────────────────────────────
-        local id         = uuid()
-        local identifier = getIdentifier(src) or tostring(src)
-        local group      = getOrCreateGroup(data.group)
+        local group = getOrCreateGroup(data.group)
 
         local propData = {
             model          = data.model,
@@ -354,42 +305,19 @@ RegisterNetEvent('ar_propmanager:saveProp', function(data)
             quat           = quat,
             renderDistance = data.renderDistance or 200,
             expiresAt      = data.expiresAt,
-            entity         = nil,
-            netId          = nil,
         }
-
-        if data.netId then
-            local entity = NetworkGetEntityFromNetworkId(data.netId)
-            if entity and entity ~= 0 then
-                propData.entity = entity
-                propData.netId  = data.netId
-                FreezeEntityPosition(entity, true)
-            end
-        elseif group.enabled then
-            local entity, netId = spawnEntity(
-                data.model,
-                pos.x, pos.y, pos.z,
-                quat.x, quat.y, quat.z, quat.w
-            )
-            if entity then
-                propData.entity = entity
-                propData.netId  = netId
-            end
-        end
-
-        group.props[id] = propData
 
         MySQL.query(
             'INSERT IGNORE INTO `ar_prop_groups` (group_name, enabled) VALUES (?, 1)',
             { data.group }
         )
-        MySQL.query(
-            'INSERT INTO `ar_props` (id,model,pos_x,pos_y,pos_z,quat_x,quat_y,quat_z,quat_w,group_name,placed_by,render_distance,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
-            { id, data.model, pos.x, pos.y, pos.z, quat.x, quat.y, quat.z, quat.w, data.group, identifier, propData.renderDistance, propData.expiresAt }
+        local id = MySQL.insert.await(
+            'INSERT INTO `ar_props` (model,pos_x,pos_y,pos_z,quat_x,quat_y,quat_z,quat_w,group_name,render_distance,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+            { data.model, pos.x, pos.y, pos.z, quat.x, quat.y, quat.z, quat.w, data.group, propData.renderDistance, propData.expiresAt }
         )
+        group.props[id] = propData
+        broadcastPropAdded(id, propData, data.group)
     end
-
-    broadcastSync()
 end)
 
 --- data: { id }
@@ -411,12 +339,10 @@ RegisterNetEvent('ar_propmanager:deleteProp', function(data)
         return
     end
 
-    despawnProp(propData)
     groups[targetGroupName].props[data.id] = nil
 
     MySQL.query('DELETE FROM `ar_props` WHERE id = ?', { data.id })
-
-    broadcastSync()
+    broadcastPropsRemoved({ data.id })
 end)
 
 -- ─── Expiry cron ─────────────────────────────────────────────────────────────
@@ -436,7 +362,6 @@ local function checkExpiredProps()
     if #expired == 0 then return end
 
     for _, entry in ipairs(expired) do
-        despawnProp(entry.prop)
         groups[entry.groupName].props[entry.dbId] = nil
         print(('[ar_propmanager] Expired prop removed — id: %s, model: %s, group: %s')
             :format(entry.dbId, entry.prop.model, entry.groupName))
@@ -448,7 +373,7 @@ local function checkExpiredProps()
     local placeholders = string.rep('?,', #ids):sub(1, -2)
     MySQL.query('DELETE FROM `ar_props` WHERE id IN (' .. placeholders .. ')', ids)
 
-    broadcastSync()
+    broadcastPropsRemoved(ids)
 end
 
 lib.cron.new(config.expiryCron, checkExpiredProps)
@@ -474,12 +399,11 @@ end
 RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
     if getPlayerLevel(source) < 3 then return end
 
-    local id = uuid()
     local areaType, ax, ay, az, aRadius, zoneJson = decomposeArea(data.area)
 
-    MySQL.query(
-        'INSERT INTO `ar_player_access` (id,identifier,name,groups,area_type,area_x,area_y,area_z,area_radius,zone_points) VALUES (?,?,?,?,?,?,?,?,?,?)',
-        { id, data.identifier, data.name, json.encode(data.groups or {}), areaType, ax, ay, az, aRadius, zoneJson }
+    local id = MySQL.insert.await(
+        'INSERT INTO `ar_player_access` (identifier,name,groups,area_type,area_x,area_y,area_z,area_radius,zone_points) VALUES (?,?,?,?,?,?,?,?,?)',
+        { data.identifier, data.name, json.encode(data.groups or {}), areaType, ax, ay, az, aRadius, zoneJson }
     )
 
     -- Return confirmed record so UI can swap the optimistic temp id
@@ -573,10 +497,9 @@ local function buildPlayerPayload(source)
                 for dbId, prop in pairs(group.props) do
                     propList[#propList + 1] = {
                         id             = dbId,
-                        netId          = prop.netId,
-                        handle         = prop.netId,
                         model          = prop.model,
                         position       = prop.position,
+                        quaternion     = prop.quat,
                         group          = gName,
                         outlined       = false,
                         renderDistance = prop.renderDistance or 200,
@@ -622,6 +545,12 @@ end
 
 lib.callback.register('ar_propmanager:getProps', function(source)
     return buildPlayerPayload(source)
+end)
+
+--- Returns the full spawn payload (all props + group states) for client-side rendering.
+--- No access filtering — props are world objects visible to everyone.
+lib.callback.register('ar_propmanager:getSpawnData', function()
+    return buildSyncPayload()
 end)
 
 -- ─── Exports ─────────────────────────────────────────────────────────────────

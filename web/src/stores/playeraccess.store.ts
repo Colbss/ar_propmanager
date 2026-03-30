@@ -16,7 +16,7 @@ export interface ZoneArea {
 export type AreaRestriction = RadiusArea | ZoneArea
 
 export interface PlayerAccessEntry {
-  id: string
+  id: number
   identifier: string
   name: string
   groups: string[]
@@ -37,7 +37,7 @@ export const usePlayerAccessStore = defineStore('playerAccess', () => {
     useApi('UpdatePlayerAccess', { method: 'POST', body: JSON.stringify(entry) }, undefined, {})
   }
 
-  const deleteEntry = (id: string) => {
+  const deleteEntry = (id: number) => {
     useApi('DeletePlayerAccess', { method: 'POST', body: JSON.stringify({ id }) }, undefined, {})
     entries.value = entries.value.filter((e) => e.id !== id)
   }

@@ -3,11 +3,10 @@ import { ref, computed } from 'vue'
 import { useApi } from '../composables/useApi'
 
 export interface PropEntry {
-  id: string
-  netId?: number
-  handle: number
+  id: number
   model: string
   position: { x: number; y: number; z: number }
+  quaternion?: { x: number; y: number; z: number; w: number }
   group: string
   outlined: boolean
   renderDistance?: number
@@ -51,18 +50,17 @@ export const usePropManagerStore = defineStore('propManager', () => {
     return map
   })
 
-  const teleport = (id: string) => {
-    const prop = props.value.find((p) => p.id === id)
-    useApi('TeleportToProp', { method: 'POST', body: JSON.stringify({ id, netId: prop?.netId }) }, undefined, {})
+  const teleport = (id: number) => {
+    useApi('TeleportToProp', { method: 'POST', body: JSON.stringify({ id }) }, undefined, {})
   }
 
-  const outline = (id: string) => {
+  const outline = (id: number) => {
     useApi('OutlineProp', { method: 'POST', body: JSON.stringify({ id }) }, undefined, {})
     const prop = props.value.find((p) => p.id === id)
     if (prop) prop.outlined = !prop.outlined
   }
 
-  const deleteProp = (id: string) => {
+  const deleteProp = (id: number) => {
     useApi('DeleteProp', { method: 'POST', body: JSON.stringify({ id }) }, undefined, {})
     props.value = props.value.filter((p) => p.id !== id)
   }
