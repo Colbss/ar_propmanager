@@ -47,7 +47,7 @@ export const usePropManagerStore = defineStore('propManager', () => {
       if (!map.has(prop.group)) map.set(prop.group, [])
       map.get(prop.group)!.push(prop)
     }
-    return map
+    return new Map([...map.entries()].sort(([a], [b]) => a.localeCompare(b)))
   })
 
   const teleport = (id: number) => {
@@ -55,26 +55,33 @@ export const usePropManagerStore = defineStore('propManager', () => {
   }
 
   const outline = (id: number) => {
-    useApi('OutlineProp', { method: 'POST', body: JSON.stringify({ id }) }, undefined, {})
-    const prop = props.value.find((p) => p.id === id)
-    if (prop) prop.outlined = !prop.outlined
+    useApi<string>('OutlineProp', { method: 'POST', body: JSON.stringify({ id }) }, undefined, 'ok')
+      .then(() => {
+        const prop = props.value.find((p) => p.id === id)
+        if (prop) prop.outlined = !prop.outlined
+      })
   }
 
   const deleteProp = (id: number) => {
-    useApi('DeleteProp', { method: 'POST', body: JSON.stringify({ id }) }, undefined, {})
-    props.value = props.value.filter((p) => p.id !== id)
+    useApi<string>('DeleteProp', { method: 'POST', body: JSON.stringify({ id }) }, undefined, 'ok')
+      .then(() => {
+        props.value = props.value.filter((p) => p.id !== id)
+      })
   }
 
   const outlineAll = () => {
     const target = !props.value.every((p) => p.outlined)
-    for (const prop of props.value) prop.outlined = target
-    useApi('OutlineAllProps', { method: 'POST', body: JSON.stringify({ outlined: target }) }, undefined, {})
+    useApi<string>('OutlineAllProps', { method: 'POST', body: JSON.stringify({ outlined: target }) }, undefined, 'ok')
+      .then(() => {
+        for (const prop of props.value) prop.outlined = target
+      })
   }
 
   const toggleGroup = (group: string, enabled: boolean) => {
-    useApi('ToggleGroup', { method: 'POST', body: JSON.stringify({ group, enabled }) }, undefined, {})
-    // Optimistic update — will be corrected by the server's syncPropList broadcast
-    groupStates.value = { ...groupStates.value, [group]: enabled }
+    useApi<string>('ToggleGroup', { method: 'POST', body: JSON.stringify({ group, enabled }) }, undefined, 'ok')
+      .then(() => {
+        groupStates.value = { ...groupStates.value, [group]: enabled }
+      })
   }
 
   return { isVisible, props, groupStates, groups, collapsedGroups, applyGroupDefaults, toggleCollapsed, teleport, outline, outlineAll, deleteProp, toggleGroup }

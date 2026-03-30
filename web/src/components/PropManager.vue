@@ -61,6 +61,10 @@ useNuiEvent<Record<string, boolean>>('updateGroupStates', (groupStates) => {
   propStore.applyGroupDefaults(groupStates)
 })
 
+useNuiEvent<PlayerAccessEntry>('playerAccessSaved', (entry) => {
+  accessStore.entries.push(entry)
+})
+
 useNuiEvent('closePropManager', () => {
   windowVisible.value = false
 })

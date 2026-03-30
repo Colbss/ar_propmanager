@@ -27,9 +27,9 @@ const fmtExpiry = (epoch: number) => {
   return `${dd}/${mm}/${yyyy} ${hh}:${min}`
 }
 
-const pendingDelete = ref<string | null>(null)
+const pendingDelete = ref<number | null>(null)
 
-const requestDelete = (id: string) => {
+const requestDelete = (id: number) => {
   if (pendingDelete.value === id) {
     store.deleteProp(id)
     pendingDelete.value = null
@@ -169,6 +169,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
                 class="rounded px-2 py-1 transition hover:bg-white/10"
                 :class="pendingDelete === prop.id ? 'text-red-400 hover:text-red-300' : 'text-slate-400 hover:text-slate-100'"
                 :title="pendingDelete === prop.id ? 'Click again to confirm delete' : 'Delete prop'"
+                @mousedown.stop
                 @click.stop="requestDelete(prop.id)"
               >
                 <i class="pi text-xs" :class="pendingDelete === prop.id ? 'pi-exclamation-triangle' : 'pi-trash'" />

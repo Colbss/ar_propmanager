@@ -29,17 +29,32 @@ export const usePlayerAccessStore = defineStore('playerAccess', () => {
   const availableGroups = ref<string[]>([])
 
   const addEntry = (data: Omit<PlayerAccessEntry, 'id'>) => {
-    useApi('AddPlayerAccess', { method: 'POST', body: JSON.stringify(data) }, undefined, {})
+    useApi<PlayerAccessEntry>(
+      'AddPlayerAccess',
+      { method: 'POST', body: JSON.stringify(data) },
+      undefined,
+      { id: Date.now(), ...data },
+    ).then((result) => {
+      const entry = result.data?.value
+      if (entry && typeof entry === 'object' && 'id' in entry) {
+        entries.value.push(entry as PlayerAccessEntry)
+      }
+    })
   }
 
   const updateEntry = (entry: PlayerAccessEntry) => {
-    console.log('Updating entry:', entry)
-    useApi('UpdatePlayerAccess', { method: 'POST', body: JSON.stringify(entry) }, undefined, {})
+    useApi<string>('UpdatePlayerAccess', { method: 'POST', body: JSON.stringify(entry) }, undefined, 'ok')
+      .then(() => {
+        const idx = entries.value.findIndex((e) => e.id === entry.id)
+        if (idx !== -1) entries.value[idx] = entry
+      })
   }
 
   const deleteEntry = (id: number) => {
-    useApi('DeletePlayerAccess', { method: 'POST', body: JSON.stringify({ id }) }, undefined, {})
-    entries.value = entries.value.filter((e) => e.id !== id)
+    useApi<string>('DeletePlayerAccess', { method: 'POST', body: JSON.stringify({ id }) }, undefined, 'ok')
+      .then(() => {
+        entries.value = entries.value.filter((e) => e.id !== id)
+      })
   }
 
   return { isVisible, entries, availableGroups, addEntry, updateEntry, deleteEntry }

@@ -107,7 +107,6 @@ const submitForm = () => {
     if (idx !== -1) store.entries[idx] = { id: editingId.value, ...payload }
   } else {
     store.addEntry(payload)
-    store.entries.push({ id: `temp_${Date.now()}`, ...payload })
   }
 
   cancelForm()
