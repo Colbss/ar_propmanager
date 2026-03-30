@@ -19,7 +19,7 @@ export interface PlayerAccessEntry {
   id: string
   identifier: string
   name: string
-  group: string
+  groups: string[]
   area: AreaRestriction | null
 }
 
@@ -33,6 +33,7 @@ export const usePlayerAccessStore = defineStore('playerAccess', () => {
   }
 
   const updateEntry = (entry: PlayerAccessEntry) => {
+    console.log('Updating entry:', entry)
     useApi('UpdatePlayerAccess', { method: 'POST', body: JSON.stringify(entry) }, undefined, {})
   }
 

@@ -76,7 +76,7 @@ local function hasPlayerAccess(source, group, position)
     if not identifier then return false end
 
     local rows = MySQL.query.await(
-        'SELECT * FROM `ar_player_access` WHERE identifier = ? AND group_name = ?',
+        'SELECT * FROM `ar_player_access` WHERE identifier = ? AND JSON_CONTAINS(`groups`, JSON_QUOTE(?))',
         { identifier, group }
     )
     if not rows or #rows == 0 then return false end
@@ -132,13 +132,6 @@ local function createTables()
         )
     ]])
 
-    -- Migration: add render_distance / expires_at to existing installs
-    MySQL.query([[
-        ALTER TABLE `ar_props`
-            ADD COLUMN IF NOT EXISTS `render_distance` FLOAT     NOT NULL DEFAULT 200,
-            ADD COLUMN IF NOT EXISTS `expires_at`      BIGINT    NULL
-    ]])
-
     MySQL.query([[
         CREATE TABLE IF NOT EXISTS `ar_prop_groups` (
             `group_name` VARCHAR(64) NOT NULL,
@@ -149,27 +142,21 @@ local function createTables()
 
     MySQL.query([[
         CREATE TABLE IF NOT EXISTS `ar_player_access` (
-            `id`          VARCHAR(36)              NOT NULL,
-            `identifier`  VARCHAR(64)              NOT NULL,
-            `name`        VARCHAR(64)              NOT NULL,
-            `group_name`  VARCHAR(64)              NOT NULL,
-            `area_type`   ENUM('radius','zone')    NULL DEFAULT NULL,
-            `area_x`      FLOAT                   NULL,
-            `area_y`      FLOAT                   NULL,
-            `area_z`      FLOAT                   NULL,
-            `area_radius` FLOAT                   NULL,
-            `zone_points` JSON                    NULL,
+            `id`          VARCHAR(36)           NOT NULL,
+            `identifier`  VARCHAR(64)           NOT NULL,
+            `name`        VARCHAR(64)           NOT NULL,
+            `groups`      JSON                  NOT NULL,
+            `area_type`   ENUM('radius','zone') NULL DEFAULT NULL,
+            `area_x`      FLOAT                 NULL,
+            `area_y`      FLOAT                 NULL,
+            `area_z`      FLOAT                 NULL,
+            `area_radius` FLOAT                 NULL,
+            `zone_points` JSON                  NULL,
             PRIMARY KEY (`id`),
             INDEX `idx_identifier` (`identifier`)
         )
     ]])
 
-    -- Migration: add area_type / zone_points to existing installs
-    MySQL.query([[
-        ALTER TABLE `ar_player_access`
-            ADD COLUMN IF NOT EXISTS `area_type`   ENUM('radius','zone') NULL DEFAULT NULL,
-            ADD COLUMN IF NOT EXISTS `zone_points` JSON                  NULL
-    ]])
 end
 
 -- ─── Entity helpers ───────────────────────────────────────────────────────────
@@ -483,7 +470,7 @@ local function decomposeArea(area)
     return 'radius', c.x, c.y, c.z, area.radius, nil
 end
 
---- data: { identifier, name, group, area? }
+--- data: { identifier, name, groups, area? }
 RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
     if getPlayerLevel(source) < 3 then return end
 
@@ -491,8 +478,8 @@ RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
     local areaType, ax, ay, az, aRadius, zoneJson = decomposeArea(data.area)
 
     MySQL.query(
-        'INSERT INTO `ar_player_access` (id,identifier,name,group_name,area_type,area_x,area_y,area_z,area_radius,zone_points) VALUES (?,?,?,?,?,?,?,?,?,?)',
-        { id, data.identifier, data.name, data.group, areaType, ax, ay, az, aRadius, zoneJson }
+        'INSERT INTO `ar_player_access` (id,identifier,name,groups,area_type,area_x,area_y,area_z,area_radius,zone_points) VALUES (?,?,?,?,?,?,?,?,?,?)',
+        { id, data.identifier, data.name, json.encode(data.groups or {}), areaType, ax, ay, az, aRadius, zoneJson }
     )
 
     -- Return confirmed record so UI can swap the optimistic temp id
@@ -500,19 +487,19 @@ RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
         id         = id,
         identifier = data.identifier,
         name       = data.name,
-        group      = data.group,
+        groups     = data.groups or {},
         area       = data.area,
     })
 end)
 
---- data: { id, identifier, name, group, area? }
+--- data: { id, identifier, name, groups, area? }
 RegisterNetEvent('ar_propmanager:updatePlayerAccess', function(data)
     if getPlayerLevel(source) < 3 then return end
 
     local areaType, ax, ay, az, aRadius, zoneJson = decomposeArea(data.area)
     MySQL.query(
-        'UPDATE `ar_player_access` SET identifier=?,name=?,group_name=?,area_type=?,area_x=?,area_y=?,area_z=?,area_radius=?,zone_points=? WHERE id=?',
-        { data.identifier, data.name, data.group, areaType, ax, ay, az, aRadius, zoneJson, data.id }
+        'UPDATE `ar_player_access` SET identifier=?,name=?,groups=?,area_type=?,area_x=?,area_y=?,area_z=?,area_radius=?,zone_points=? WHERE id=?',
+        { data.identifier, data.name, json.encode(data.groups or {}), areaType, ax, ay, az, aRadius, zoneJson, data.id }
     )
 end)
 
@@ -563,14 +550,20 @@ local function buildPlayerPayload(source)
         if not identifier then return nil end
 
         local accessRows = MySQL.query.await(
-            'SELECT DISTINCT group_name FROM `ar_player_access` WHERE identifier = ?',
+            'SELECT `groups` FROM `ar_player_access` WHERE identifier = ?',
             { identifier }
         )
         if not accessRows or #accessRows == 0 then return nil end
 
-        -- Effective level 2, but only the groups they are assigned to
+        -- Collect every group across all rows for this player
         local allowed = {}
-        for _, row in ipairs(accessRows) do allowed[row.group_name] = true end
+        for _, row in ipairs(accessRows) do
+            local ok, groupList = pcall(json.decode, row.groups)
+            if ok and groupList then
+                for _, g in ipairs(groupList) do allowed[g] = true end
+            end
+        end
+        if not next(allowed) then return nil end
 
         local propList  = {}
         local stateSubset = {}
@@ -608,11 +601,12 @@ local function buildPlayerPayload(source)
         local rows = MySQL.query.await('SELECT * FROM `ar_player_access`')
         local entries = {}
         for _, row in ipairs(rows or {}) do
+            local ok, groupList = pcall(json.decode, row.groups)
             entries[#entries + 1] = {
                 id         = row.id,
                 identifier = row.identifier,
                 name       = row.name,
-                group      = row.group_name,
+                groups     = (ok and groupList) or {},
                 area       = rowToArea(row),
             }
         end

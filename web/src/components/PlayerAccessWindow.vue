@@ -14,7 +14,7 @@ const editingId = ref<string | null>(null)
 const emptyForm = () => ({
   name: '',
   identifier: '',
-  group: '',
+  groups: [] as string[],
   hasArea: false,
   areaType: 'radius' as 'radius' | 'zone',
   radius: { x: '', y: '', z: '', r: '' },
@@ -32,7 +32,7 @@ const openAdd = () => {
 const openEdit = (entry: PlayerAccessEntry) => {
   form.name = entry.name
   form.identifier = entry.identifier
-  form.group = entry.group
+  form.groups = [...(entry.groups ?? [])]
   form.hasArea = entry.area !== null
 
   if (entry.area?.type === 'zone') {
@@ -77,13 +77,27 @@ const buildArea = (): AreaRestriction | null => {
   }
 }
 
+const customGroup = ref('')
+
+const toggleGroup = (g: string) => {
+  const idx = form.groups.indexOf(g)
+  if (idx === -1) form.groups.push(g)
+  else form.groups.splice(idx, 1)
+}
+
+const addCustomGroup = () => {
+  const g = customGroup.value.trim()
+  if (g && !form.groups.includes(g)) form.groups.push(g)
+  customGroup.value = ''
+}
+
 const submitForm = () => {
-  if (!form.name.trim() || !form.identifier.trim() || !form.group) return
+  if (!form.name.trim() || !form.identifier.trim() || form.groups.length === 0) return
 
   const payload = {
     name: form.name.trim(),
     identifier: form.identifier.trim(),
-    group: form.group,
+    groups: [...form.groups],
     area: buildArea(),
   }
 
@@ -166,7 +180,7 @@ function areaTitle(area: AreaRestriction | null) {
       <div v-if="showForm" class="border-b border-white/10 bg-white/5 p-4">
         <div class="mb-3 text-xs font-semibold text-slate-300">{{ editingId ? 'Edit Access Entry' : 'Grant Player Access' }}</div>
 
-        <div class="mb-3 grid grid-cols-2 gap-2">
+        <div class="mb-2 grid grid-cols-2 gap-2">
           <!-- Name -->
           <div class="flex flex-col gap-1">
             <label class="text-xs text-slate-400">Player Name</label>
@@ -178,19 +192,58 @@ function areaTitle(area: AreaRestriction | null) {
             />
           </div>
 
-          <!-- Group -->
-          <div class="flex flex-col gap-1">
-            <label class="text-xs text-slate-400">Group</label>
-            <input
-              v-model="form.group"
-              list="access-groups"
-              type="text"
-              placeholder="Select or type group…"
-              class="rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-white/25 focus:bg-white/10"
-            />
-            <datalist id="access-groups">
-              <option v-for="g in store.availableGroups" :key="g" :value="g" />
-            </datalist>
+          <!-- Groups -->
+          <div class="col-span-2 flex flex-col gap-1">
+            <label class="text-xs text-slate-400">
+              Groups
+              <span v-if="form.groups.length" class="ml-1 text-slate-500">({{ form.groups.length }} selected)</span>
+            </label>
+            <!-- Known groups -->
+            <div class="flex flex-wrap gap-1">
+              <button
+                v-for="g in store.availableGroups"
+                :key="g"
+                type="button"
+                class="rounded px-2 py-0.5 text-xs transition"
+                :class="form.groups.includes(g)
+                  ? 'bg-blue-600/60 text-blue-200 ring-1 ring-blue-500/40'
+                  : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
+                @click.stop="toggleGroup(g)"
+              >
+                {{ g }}
+              </button>
+            </div>
+            <!-- Custom groups not in the known list, shown as removable chips -->
+            <div v-if="form.groups.some(g => !store.availableGroups.includes(g))" class="flex flex-wrap gap-1">
+              <span
+                v-for="g in form.groups.filter(g => !store.availableGroups.includes(g))"
+                :key="g"
+                class="flex items-center gap-1 rounded bg-violet-600/40 px-2 py-0.5 text-xs text-violet-200 ring-1 ring-violet-500/30"
+              >
+                {{ g }}
+                <button type="button" class="ml-0.5 opacity-60 hover:opacity-100" @click.stop="toggleGroup(g)">
+                  <i class="pi pi-times text-[0.6rem]" />
+                </button>
+              </span>
+            </div>
+            <!-- Add new group input -->
+            <div class="flex gap-1">
+              <input
+                v-model="customGroup"
+                type="text"
+                placeholder="New group name…"
+                class="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-white/25 focus:bg-white/10"
+                @keydown.enter.prevent="addCustomGroup"
+              />
+              <button
+                type="button"
+                class="rounded bg-white/10 px-2.5 py-1 text-xs text-slate-300 transition hover:bg-white/20 disabled:opacity-40"
+                :disabled="!customGroup.trim()"
+                @click.stop="addCustomGroup"
+              >
+                Add
+              </button>
+            </div>
           </div>
 
           <!-- Identifier (full width) -->
@@ -205,33 +258,38 @@ function areaTitle(area: AreaRestriction | null) {
           </div>
         </div>
 
-        <!-- Area restriction toggle -->
-        <label class="mb-2 flex cursor-pointer items-center gap-2 text-xs">
-          <input v-model="form.hasArea" type="checkbox" class="accent-blue-500" />
-          <span class="text-slate-300">Restrict to area</span>
-        </label>
-
-        <!-- Area inputs -->
+        <!-- Area restriction -->
+        <label class="mb-1 block text-xs text-slate-400">Area Restriction</label>
         <Transition name="form-slide">
-          <div v-if="form.hasArea" class="mt-2 rounded border border-white/10 bg-white/5 p-3">
-            <!-- Area type selector -->
-            <div class="mb-3 flex gap-1.5">
+          <div class="rounded border border-white/10 bg-white/5 p-3">
+            <!-- Area type selector (None / Radius / Zone) -->
+            <div class="flex gap-1.5" :class="form.hasArea ? 'mb-3' : ''">
               <button
                 class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
-                :class="form.areaType === 'radius'
+                :class="!form.hasArea
+                  ? 'bg-white/15 text-slate-200'
+                  : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
+                @click="form.hasArea = false"
+              >
+                <i class="pi pi-ban text-[0.7rem]" />
+                None
+              </button>
+              <button
+                class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
+                :class="form.hasArea && form.areaType === 'radius'
                   ? 'bg-blue-600/50 text-blue-200'
                   : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
-                @click="form.areaType = 'radius'"
+                @click="form.hasArea = true; form.areaType = 'radius'"
               >
                 <i class="pi pi-circle text-[0.7rem]" />
                 Radius
               </button>
               <button
                 class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
-                :class="form.areaType === 'zone'
+                :class="form.hasArea && form.areaType === 'zone'
                   ? 'bg-blue-600/50 text-blue-200'
                   : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
-                @click="form.areaType = 'zone'"
+                @click="form.hasArea = true; form.areaType = 'zone'"
               >
                 <i class="pi pi-map text-[0.7rem]" />
                 Zone
@@ -239,7 +297,7 @@ function areaTitle(area: AreaRestriction | null) {
             </div>
 
             <!-- Radius inputs -->
-            <template v-if="form.areaType === 'radius'">
+            <template v-if="form.hasArea && form.areaType === 'radius'">
               <div class="mb-2 flex items-center justify-between">
                 <span class="text-xs text-slate-400">Area Center</span>
                 <button
@@ -273,7 +331,7 @@ function areaTitle(area: AreaRestriction | null) {
             </template>
 
             <!-- Zone inputs -->
-            <template v-else>
+            <template v-else-if="form.hasArea && form.areaType === 'zone'">
               <MapZonePicker v-model="form.zonePoints" />
             </template>
           </div>
@@ -289,7 +347,7 @@ function areaTitle(area: AreaRestriction | null) {
           </button>
           <button
             class="rounded bg-blue-600/80 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-500/80 disabled:opacity-40"
-            :disabled="!form.name.trim() || !form.identifier.trim() || !form.group"
+            :disabled="!form.name.trim() || !form.identifier.trim() || form.groups.length === 0"
             @click="submitForm"
           >
             {{ editingId ? 'Save Changes' : 'Grant Access' }}
@@ -315,9 +373,12 @@ function areaTitle(area: AreaRestriction | null) {
           <span class="truncate font-mono text-xs text-slate-500" :title="entry.identifier">{{ entry.identifier }}</span>
         </div>
 
-        <!-- Group badge -->
-        <span class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-xs text-slate-300">
-          {{ entry.group }}
+        <!-- Group count -->
+        <span
+          class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-xs text-slate-300"
+          :title="entry.groups.join(', ')"
+        >
+          {{ entry.groups.length }} group{{ entry.groups.length !== 1 ? 's' : '' }}
         </span>
 
         <!-- Area badge -->

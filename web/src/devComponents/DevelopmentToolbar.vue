@@ -51,8 +51,8 @@ const mockGroupStates: Record<string, boolean> = {
   'Vehicles': true,
 }
 const mockPlayerAccess = [
-  { id: 'perm_1', identifier: 'license:a1b2c3d4e5f6a1b2c3d4', name: 'John Doe',   group: 'Street Furniture', area: null },
-  { id: 'perm_2', identifier: 'license:f6e5d4c3b2a1f6e5d4c3', name: 'Jane Smith', group: 'Nature',           area: { center: { x: 215.4, y: -810.2, z: 29.7 }, radius: 100 } },
+  { id: 'perm_1', identifier: 'license:a1b2c3d4e5f6a1b2c3d4', name: 'John Doe',   groups: ['Street Furniture', 'Vehicles'], area: null },
+  { id: 'perm_2', identifier: 'license:f6e5d4c3b2a1f6e5d4c3', name: 'Jane Smith', groups: ['Nature'],                       area: { center: { x: 215.4, y: -810.2, z: 29.7 }, radius: 100 } },
 ]
 
 function buildMockProps() {
