@@ -54,6 +54,10 @@ export const usePropManagerStore = defineStore('propManager', () => {
     useApi('TeleportToProp', { method: 'POST', body: JSON.stringify({ id }) }, undefined, {})
   }
 
+  const editProp = (id: number) => {
+    useApi('EditProp', { method: 'POST', body: JSON.stringify({ id }) }, undefined, {})
+  }
+
   const outline = (id: number) => {
     useApi<string>('OutlineProp', { method: 'POST', body: JSON.stringify({ id }) }, undefined, 'ok')
       .then(() => {
@@ -84,5 +88,5 @@ export const usePropManagerStore = defineStore('propManager', () => {
       })
   }
 
-  return { isVisible, props, groupStates, groups, collapsedGroups, applyGroupDefaults, toggleCollapsed, teleport, outline, outlineAll, deleteProp, toggleGroup }
+  return { isVisible, props, groupStates, groups, collapsedGroups, applyGroupDefaults, toggleCollapsed, teleport, editProp, outline, outlineAll, deleteProp, toggleGroup }
 })

@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { usePropManagerStore } from '../stores/propmanager.store'
 
-const props = defineProps<{ canManage: boolean; canTeleport: boolean }>()
+const props = defineProps<{ canManage: boolean; canEdit: boolean; canTeleport: boolean }>()
 
 const store = usePropManagerStore()
 
@@ -115,8 +115,16 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
               </span>
             </div>
 
-            <!-- Expiry + actions -->
+            <!-- Badges + actions -->
             <div class="flex shrink-0 items-center gap-2">
+              <!-- Render distance -->
+              <span
+                v-if="prop.renderDistance"
+                class="rounded bg-white/5 px-1.5 py-0.5 text-[0.7rem] text-slate-500"
+                title="Render distance"
+              >{{ prop.renderDistance }}m</span>
+
+              <!-- Expiry -->
               <span
                 v-if="prop.expiresAt"
                 class="rounded px-1.5 py-0.5 text-[0.7rem]"
@@ -129,39 +137,50 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
               </span>
 
               <div class="flex items-center gap-1">
-              <!-- Teleport -->
-              <button
-                v-if="props.canTeleport"
-                class="rounded px-2 py-1 text-slate-400 transition hover:bg-white/10 hover:text-slate-100"
-                :disabled="!isGroupEnabled(groupName)"
-                title="Teleport to prop"
-                @click.stop="store.teleport(prop.id)"
-              >
-                <i class="pi pi-map-marker text-xs" />
-              </button>
+                <!-- Teleport -->
+                <button
+                  v-if="props.canTeleport"
+                  class="rounded px-2 py-1 text-slate-400 transition hover:bg-white/10 hover:text-slate-100"
+                  :disabled="!isGroupEnabled(groupName)"
+                  title="Teleport to prop"
+                  @click.stop="store.teleport(prop.id)"
+                >
+                  <i class="pi pi-map-marker text-xs" />
+                </button>
 
-              <!-- Outline -->
-              <button
-                class="rounded px-2 py-1 transition hover:bg-white/10"
-                :disabled="!isGroupEnabled(groupName)"
-                :class="prop.outlined ? 'text-yellow-400 hover:text-yellow-300' : 'text-slate-400 hover:text-slate-100'"
-                title="Toggle outline"
-                @click.stop="store.outline(prop.id)"
-              >
-                <i class="pi pi-eye text-xs" />
-              </button>
+                <!-- Edit / move -->
+                <button
+                  v-if="props.canEdit"
+                  class="rounded px-2 py-1 text-slate-400 transition hover:bg-white/10 hover:text-slate-100"
+                  :disabled="!isGroupEnabled(groupName)"
+                  title="Move prop"
+                  @click.stop="store.editProp(prop.id)"
+                >
+                  <i class="pi pi-arrows-alt text-xs" />
+                </button>
 
-              <!-- Delete (manage only) -->
-              <button
-                v-if="props.canManage"
-                class="rounded px-2 py-1 transition hover:bg-white/10"
-                :class="pendingDelete === prop.id ? 'text-red-400 hover:text-red-300' : 'text-slate-400 hover:text-slate-100'"
-                :title="pendingDelete === prop.id ? 'Click again to confirm delete' : 'Delete prop'"
-                @mousedown.stop
-                @click.stop="requestDelete(prop.id)"
-              >
-                <i class="pi text-xs" :class="pendingDelete === prop.id ? 'pi-exclamation-triangle' : 'pi-trash'" />
-              </button>
+                <!-- Outline -->
+                <button
+                  class="rounded px-2 py-1 transition hover:bg-white/10"
+                  :disabled="!isGroupEnabled(groupName)"
+                  :class="prop.outlined ? 'text-yellow-400 hover:text-yellow-300' : 'text-slate-400 hover:text-slate-100'"
+                  title="Toggle outline"
+                  @click.stop="store.outline(prop.id)"
+                >
+                  <i class="pi pi-eye text-xs" />
+                </button>
+
+                <!-- Delete (manage only) -->
+                <button
+                  v-if="props.canManage"
+                  class="rounded px-2 py-1 transition hover:bg-white/10"
+                  :class="pendingDelete === prop.id ? 'text-red-400 hover:text-red-300' : 'text-slate-400 hover:text-slate-100'"
+                  :title="pendingDelete === prop.id ? 'Click again to confirm delete' : 'Delete prop'"
+                  @mousedown.stop
+                  @click.stop="requestDelete(prop.id)"
+                >
+                  <i class="pi text-xs" :class="pendingDelete === prop.id ? 'pi-exclamation-triangle' : 'pi-trash'" />
+                </button>
               </div>
             </div>
           </div>

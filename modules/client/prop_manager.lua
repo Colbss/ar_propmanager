@@ -58,6 +58,38 @@ RegisterNUICallback('PlaceProp', function(data, cb)
     cb('ok')
 end)
 
+RegisterNUICallback('EditProp', function(data, cb)
+    lib.callback('ar_propmanager:canInteractWithProp', false, function(allowed)
+        if not allowed then cb('denied') return end
+        local id   = data.id
+        local prop = propCache[id]
+        if not prop then cb('error') return end
+
+        local pos = prop.position
+        SetEntityCoords(PlayerPedId(), pos.x, pos.y, pos.z + 1.0, false, false, false, false)
+
+        local attempts = 0
+        while not spawnedProps[id] and attempts < 20 do
+            Wait(100)
+            attempts = attempts + 1
+        end
+
+        local entity = spawnedProps[id]
+        if not entity or not DoesEntityExist(entity) then cb('error') return end
+
+        ClosePropManager()
+        OpenGizmo(entity, {
+            dbId           = id,
+            model          = prop.model,
+            group          = prop.group,
+            renderDistance = prop.renderDistance or 200,
+            expiresAt      = prop.expiresAt,
+        })
+
+        cb('ok')
+    end, data.id)
+end)
+
 RegisterNUICallback('TeleportToProp', function(data, cb)
     lib.callback('ar_propmanager:canInteractWithProp', false, function(allowed)
         if not allowed then cb('denied') return end
