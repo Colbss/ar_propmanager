@@ -4,7 +4,7 @@ import { useApi } from '../composables/useApi'
 
 export interface RadiusArea {
   type: 'radius'
-  center: { x: number; y: number; z: number }
+  center: { x: number; y: number }
   radius: number
 }
 

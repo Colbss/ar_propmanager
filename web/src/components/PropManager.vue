@@ -30,11 +30,12 @@ function applyPayload(data: OpenPropManagerPayload) {
   propStore.applyGroupDefaults(propStore.groupStates)
   if (data.playerAccess) accessStore.entries = data.playerAccess
   if (data.groups) accessStore.availableGroups = data.groups
+  addPropStore.allowedGroups = data.level === 0 ? (data.playerAccess?.[0]?.groups ?? []) : []
 }
 
 useNuiEvent<OpenPropManagerPayload>('openPropManager', (data) => {
   applyPayload(data)
-  activeTab.value = data.level >= 1 ? 'props' : 'permissions'
+  activeTab.value = 'props'
   windowVisible.value = true
 })
 

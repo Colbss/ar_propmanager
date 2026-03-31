@@ -51,8 +51,17 @@ const mockGroupStates: Record<string, boolean> = {
   'Vehicles': true,
 }
 const mockPlayerAccess = [
-  { id: 'perm_1', identifier: 'license:a1b2c3d4e5f6a1b2c3d4', name: 'John Doe',   groups: ['Street Furniture', 'Vehicles'], area: null },
-  { id: 'perm_2', identifier: 'license:f6e5d4c3b2a1f6e5d4c3', name: 'Jane Smith', groups: ['Nature'],                       area: { center: { x: 215.4, y: -810.2, z: 29.7 }, radius: 100 } },
+  { id: 1, identifier: 'license:a1b2c3d4e5f6a1b2c3d4', name: 'John Doe',   groups: ['Street Furniture', 'Vehicles'], area: null },
+  { id: 2, identifier: 'license:f6e5d4c3b2a1f6e5d4c3', name: 'Jane Smith', groups: ['Nature'], area: { type: 'radius', center: { x: 215.4, y: -810.2 }, radius: 150 } },
+  { id: 3, identifier: 'license:c3b2a1f6e5d4c3b2a1f6', name: 'Bob Jones',  groups: ['Street Furniture'], area: { type: 'zone', points: [{ x: 100, y: -900 }, { x: 250, y: -900 }, { x: 250, y: -750 }, { x: 100, y: -750 }] } },
+]
+
+const mockRestrictedRadius = [
+  { id: 2, identifier: 'license:f6e5d4c3b2a1f6e5d4c3', name: 'Jane Smith', groups: ['Nature'], area: { type: 'radius', center: { x: 215.4, y: -810.2 }, radius: 150 } },
+]
+
+const mockRestrictedZone = [
+  { id: 3, identifier: 'license:c3b2a1f6e5d4c3b2a1f6', name: 'Bob Jones',  groups: ['Street Furniture'], area: { type: 'zone', points: [{ x: 100, y: -900 }, { x: 250, y: -900 }, { x: 250, y: -750 }, { x: 100, y: -750 }] } },
 ]
 
 function buildMockProps() {
@@ -70,17 +79,19 @@ function buildMockProps() {
   }))
 }
 
-const testPropManager = (level: number) => {
+const testPropManager = (level: number, playerAccess?: any[]) => {
   const data: Record<string, any> = { level, props: buildMockProps(), groupStates: mockGroupStates }
   if (level >= 3) {
     data.playerAccess = mockPlayerAccess
     data.groups = mockGroups
+  } else if (level === 0 && playerAccess) {
+    data.playerAccess = playerAccess
   }
   debugData({ action: 'openPropManager', data })
 }
 
 const items = [
-  { label: 'Test Gizmo',                command: testGizmo },
+  { label: 'Test Gizmo', command: testGizmo },
   {
     label: 'Close Gizmo',
     command: () => {
@@ -90,9 +101,11 @@ const items = [
       pmStore.showOverlay = false
     }
   },
-  { label: 'Prop Manager — Level 1 (toggle groups)', command: () => testPropManager(1) },
-  { label: 'Prop Manager — Level 2 (manage)',         command: () => testPropManager(2) },
-  { label: 'Prop Manager — Level 3 (player access)',  command: () => testPropManager(3) },
+  { label: 'Prop Manager — Level 0 (restricted · radius)', command: () => testPropManager(0, mockRestrictedRadius) },
+  { label: 'Prop Manager — Level 0 (restricted · zone)',   command: () => testPropManager(0, mockRestrictedZone) },
+  { label: 'Prop Manager — Level 1 (toggle groups)',       command: () => testPropManager(1) },
+  { label: 'Prop Manager — Level 2 (manage)',              command: () => testPropManager(2) },
+  { label: 'Prop Manager — Level 3 (player access)',       command: () => testPropManager(3) },
   { label: 'Close Prop Manager', command: () => debugData({ action: 'closePropManager', data: {} }) },
 ]
 </script>

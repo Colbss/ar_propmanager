@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { usePlayerAccessStore, type PlayerAccessEntry, type AreaRestriction } from '../stores/playeraccess.store'
-import { useApi } from '../composables/useApi'
+import { ref, reactive, computed } from 'vue'
+import { usePlayerAccessStore, type PlayerAccessEntry, type AreaRestriction, type RadiusArea } from '../stores/playeraccess.store'
 import MapZonePicker from './MapZonePicker.vue'
+import MapAreaViewer from './MapAreaViewer.vue'
+import MapRadiusPicker from './MapRadiusPicker.vue'
+
+const props = defineProps<{ level: number }>()
 
 const store = usePlayerAccessStore()
+
+// ─── Restricted view (level 0) ────────────────────────────────────────────────
+
+const myEntry = computed(() => store.entries[0] ?? null)
 
 // ─── Form state ───────────────────────────────────────────────────────────────
 
@@ -17,7 +24,7 @@ const emptyForm = () => ({
   groups: [] as string[],
   hasArea: false,
   areaType: 'radius' as 'radius' | 'zone',
-  radius: { x: '', y: '', z: '', r: '' },
+  radiusArea: null as RadiusArea | null,
   zonePoints: [] as Array<{ x: number; y: number }>,
 })
 
@@ -38,17 +45,14 @@ const openEdit = (entry: PlayerAccessEntry) => {
   if (entry.area?.type === 'zone') {
     form.areaType = 'zone'
     form.zonePoints = [...entry.area.points]
-    form.radius = { x: '', y: '', z: '', r: '' }
+    form.radiusArea = null
   } else if (entry.area?.type === 'radius') {
     form.areaType = 'radius'
-    form.radius.x = String(entry.area.center.x)
-    form.radius.y = String(entry.area.center.y)
-    form.radius.z = String(entry.area.center.z)
-    form.radius.r = String(entry.area.radius)
+    form.radiusArea = { ...entry.area }
     form.zonePoints = []
   } else {
     form.areaType = 'radius'
-    form.radius = { x: '', y: '', z: '', r: '' }
+    form.radiusArea = null
     form.zonePoints = []
   }
 
@@ -63,18 +67,8 @@ const cancelForm = () => {
 
 const buildArea = (): AreaRestriction | null => {
   if (!form.hasArea) return null
-  if (form.areaType === 'zone') {
-    return { type: 'zone', points: [...form.zonePoints] }
-  }
-  return {
-    type: 'radius',
-    center: {
-      x: parseFloat(form.radius.x) || 0,
-      y: parseFloat(form.radius.y) || 0,
-      z: parseFloat(form.radius.z) || 0,
-    },
-    radius: parseFloat(form.radius.r) || 0,
-  }
+  if (form.areaType === 'zone') return { type: 'zone', points: [...form.zonePoints] }
+  return form.radiusArea?.type === 'radius' ? form.radiusArea : null
 }
 
 const customGroup = ref('')
@@ -112,26 +106,6 @@ const submitForm = () => {
   cancelForm()
 }
 
-// ─── Use current position ─────────────────────────────────────────────────────
-
-const fetchingPos = ref(false)
-
-const useMyPosition = async () => {
-  fetchingPos.value = true
-  const result = await useApi<{ x: number; y: number; z: number }>(
-    'GetPlayerPosition',
-    { method: 'POST', body: JSON.stringify({}) },
-    undefined,
-    { x: 100.0, y: 200.0, z: 30.0 }
-  )
-  if (result.data.value) {
-    form.radius.x = result.data.value.x.toFixed(1)
-    form.radius.y = result.data.value.y.toFixed(1)
-    form.radius.z = result.data.value.z.toFixed(1)
-  }
-  fetchingPos.value = false
-}
-
 // ─── Confirm delete ───────────────────────────────────────────────────────────
 
 const pendingDelete = ref<string | null>(null)
@@ -156,12 +130,54 @@ function areaLabel(area: AreaRestriction | null) {
 function areaTitle(area: AreaRestriction | null) {
   if (!area) return ''
   if (area.type === 'zone') return `Zone: ${area.points.length} vertices`
-  return `Center: ${area.center.x.toFixed(1)}, ${area.center.y.toFixed(1)}, ${area.center.z.toFixed(1)} — Radius: ${area.radius}m`
+  return `Center: ${area.center.x.toFixed(1)}, ${area.center.y.toFixed(1)} — Radius: ${area.radius}m`
 }
 </script>
 
 <template>
-  <div class="flex flex-col" @mousedown="pendingDelete = null">
+  <!-- ─── Restricted access view (level 0) ──────────────────────────────────── -->
+  <div v-if="props.level === 0" class="flex flex-col">
+    <div class="flex items-center gap-2 border-b border-white/10 px-4 py-2.5">
+      <i class="pi pi-lock text-amber-400 text-xs" />
+      <span class="text-xs font-semibold text-amber-300">Restricted Access</span>
+    </div>
+
+    <div v-if="myEntry" class="flex flex-col gap-3 p-4">
+      <p class="text-xs text-slate-400">
+        You have been granted access to manage props within the following area.
+      </p>
+
+      <!-- Groups -->
+      <div class="flex flex-col gap-1">
+        <span class="text-xs text-slate-500">Accessible Groups</span>
+        <div class="flex flex-wrap gap-1">
+          <span
+            v-for="g in myEntry.groups"
+            :key="g"
+            class="rounded bg-blue-600/30 px-2 py-0.5 text-xs text-blue-300 ring-1 ring-blue-500/30"
+          >
+            {{ g }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Area -->
+      <div class="flex flex-col gap-1">
+        <span class="text-xs text-slate-500">Area Restriction</span>
+        <div v-if="!myEntry.area" class="text-xs text-slate-400">No area restriction — full map access.</div>
+        <template v-else>
+          <MapAreaViewer :area="myEntry.area" height="35vh" />
+        </template>
+      </div>
+    </div>
+
+    <div v-else class="py-8 text-center text-xs text-slate-500">
+      No access entry found.
+    </div>
+  </div>
+
+  <!-- ─── Full management view (level >= 3) ─────────────────────────────────── -->
+  <div v-else class="flex flex-col" @mousedown="pendingDelete = null">
     <!-- Toolbar -->
     <div class="flex items-center justify-between border-b border-white/10 px-4 py-2">
       <span class="text-xs text-slate-500">{{ store.entries.length }} player{{ store.entries.length !== 1 ? 's' : '' }} with access</span>
@@ -295,38 +311,9 @@ function areaTitle(area: AreaRestriction | null) {
               </button>
             </div>
 
-            <!-- Radius inputs -->
+            <!-- Radius picker -->
             <template v-if="form.hasArea && form.areaType === 'radius'">
-              <div class="mb-2 flex items-center justify-between">
-                <span class="text-xs text-slate-400">Area Center</span>
-                <button
-                  class="flex items-center gap-1 rounded bg-white/10 px-2 py-0.5 text-xs text-slate-300 transition hover:bg-white/20 disabled:opacity-40"
-                  :disabled="fetchingPos"
-                  @click="useMyPosition"
-                >
-                  <i class="pi pi-map-marker text-[0.7rem]" />
-                  {{ fetchingPos ? 'Fetching…' : 'Use My Position' }}
-                </button>
-              </div>
-              <div class="grid grid-cols-4 gap-1.5">
-                <div v-for="(label, field) in { x: 'X', y: 'Y', z: 'Z' }" :key="field" class="flex flex-col gap-0.5">
-                  <span :class="{ 'text-red-400': field === 'x', 'text-green-400': field === 'y', 'text-blue-400': field === 'z' }" class="text-[0.7rem] font-bold">{{ label }}</span>
-                  <input
-                    v-model="form.radius[field as 'x' | 'y' | 'z']"
-                    type="text"
-                    class="rounded border border-white/10 bg-black/40 px-1.5 py-0.5 font-mono text-xs text-slate-100 outline-none focus:border-white/25"
-                  />
-                </div>
-                <div class="flex flex-col gap-0.5">
-                  <span class="text-[0.7rem] text-slate-400">Radius (m)</span>
-                  <input
-                    v-model="form.radius.r"
-                    type="text"
-                    placeholder="50"
-                    class="rounded border border-white/10 bg-black/40 px-1.5 py-0.5 font-mono text-xs text-slate-100 outline-none focus:border-white/25"
-                  />
-                </div>
-              </div>
+              <MapRadiusPicker v-model="form.radiusArea" />
             </template>
 
             <!-- Zone inputs -->

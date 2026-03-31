@@ -37,9 +37,9 @@ const ALL_TABS: { key: Tab; label: string; icon: string }[] = [
 
 const visibleTabs = computed(() =>
   ALL_TABS.filter((tab) => {
-    if (tab.key === 'props')       return props.level >= 1
+    if (tab.key === 'props')       return props.level >= 1 || props.level === 0
     if (tab.key === 'map')         return props.level >= 2
-    if (tab.key === 'permissions') return props.level >= 3
+    if (tab.key === 'permissions') return props.level >= 3 || props.level === 0
     return false
   })
 )
@@ -87,9 +87,9 @@ const visibleTabs = computed(() =>
 
       <!-- Tab content -->
       <div class="flex min-h-[50vh] flex-col">
-        <PropListWindow    v-if="activeTab === 'props'"       :can-manage="level >= 2" />
-        <PropMapWindow     v-else-if="activeTab === 'map'"    />
-        <PlayerAccessWindow v-else                            />
+        <PropListWindow     v-if="activeTab === 'props'"       :can-manage="level >= 2" :can-add="level >= 2 || level === 0" :can-teleport="level >= 1" />
+        <PropMapWindow      v-else-if="activeTab === 'map'"    />
+        <PlayerAccessWindow v-else                             :level="level" />
       </div>
     </div>
   </Transition>
