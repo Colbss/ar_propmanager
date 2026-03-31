@@ -51,7 +51,10 @@ RegisterNUICallback('PlaceProp', function(data, cb)
     )
 
     SetModelAsNoLongerNeeded(modelHash)
+    FreezeEntityPosition(prop, true)
+    SetEntityCollision(prop, false, false)
 
+    ClosePropManager()
     OpenGizmo(prop, {
         model          = model,
         group          = data.group or 'default',

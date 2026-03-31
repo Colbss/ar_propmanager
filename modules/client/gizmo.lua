@@ -60,7 +60,7 @@ keybinds.focus = lib.addKeybind({
     name        = 'gizmo_focus',
     description = string.format('~b~%s~w~', locale('keybind_focus')),
     defaultKey  = 'F',
-    onPressed   = function() end,
+    onPressed   = function() ToggleFocus() end,
 })
 keybinds.focus:disable(true)
 
@@ -96,8 +96,17 @@ local currentGizmoEntity  = nil
 local currentGizmoOptions = nil
 local originalCoords      = nil
 local originalQuat        = nil
+local hasFocus            = false
 
 -- ─── Gizmo ────────────────────────────────────────────────────────────────────
+
+--- Toggle NUI focus for the gizmo, optionally overriding the current state.
+--- @param override boolean|nil  Optional explicit focus state (true = focused, false = unfocused, nil = toggle)
+function ToggleFocus(override)
+    hasFocus = override or not hasFocus
+    SetNuiFocus(hasFocus, hasFocus)
+    SetNuiFocusKeepInput(hasFocus)
+end
 
 --- Open the gizmo for the given entity handle.
 --- @param entity  number  Entity handle
@@ -119,7 +128,7 @@ function OpenGizmo(entity, options)
     keybinds.finish:disable(false)
     keybinds.cancel:disable(false)
 
-    SetNuiFocus(true, true)
+    ToggleFocus(false)
     SendNUIMessage({ action = 'show', data = {} })
     SendNUIMessage({
         action = 'setGizmoEntity',
@@ -138,6 +147,21 @@ function OpenGizmo(entity, options)
 
     CreateThread(function()
         while gizmoActive do
+            -- Prevent camera rotation from mouse movement
+            if hasFocus then
+                DisableControlAction(0, 1, true)   -- INPUT_LOOK_LR
+                DisableControlAction(0, 2, true)   -- INPUT_LOOK_UD
+            end
+
+            -- Prevent combat actions
+            DisablePlayerFiring(PlayerId(), true)
+            DisableControlAction(0, 25, true)  -- Aim
+            DisableControlAction(0, 140, true) -- MeleeAttackLight
+            DisableControlAction(0, 141, true) -- MeleeAttackHeavy
+            DisableControlAction(0, 142, true) -- MeleeAttackAlternate
+            DisableControlAction(0, 143, true) -- MeleeAttack
+            DisableControlAction(0, 263, true) -- MeleeAttackAlt
+
             local camPos = GetGameplayCamCoords()
             local camRot = GetGameplayCamRot(2)
             SendNUIMessage({
@@ -165,15 +189,10 @@ CloseGizmo = function(save)
     keybinds.cancel:disable(true)
 
     if not save and currentGizmoEntity and DoesEntityExist(currentGizmoEntity) then
-        if originalCoords then
-            SetEntityCoords(currentGizmoEntity, originalCoords.x, originalCoords.y, originalCoords.z, false, false, false, false)
-        end
-        if originalQuat then
-            SetEntityQuaternion(currentGizmoEntity, originalQuat.x, originalQuat.y, originalQuat.z, originalQuat.w)
-        end
+        DeleteEntity(currentGizmoEntity)
     end
 
-    SetNuiFocus(false, false)
+    ToggleFocus(false)
     SendNUIMessage({ action = 'closeGizmo', data = {} })
     SendNUIMessage({ action = 'hide', data = {} })
 
@@ -196,6 +215,8 @@ RegisterNUICallback('MoveEntity', function(data, cb)
     elseif data.rotation then
         SetEntityRotation(entity, data.rotation.x, data.rotation.y, data.rotation.z, 2, false)
     end
+
+    FreezeEntityPosition(entity, true)
 
     cb('ok')
 end)
