@@ -18,7 +18,7 @@ RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
     local areaType, ax, ay, az, aRadius, zoneJson = decomposeArea(data.area)
 
     local id = MySQL.insert.await(
-        'INSERT INTO `ar_player_access` (identifier,name,groups,area_type,area_x,area_y,area_z,area_radius,zone_points) VALUES (?,?,?,?,?,?,?,?,?)',
+        'INSERT INTO `ar_props_player_access` (identifier,name,groups,area_type,area_x,area_y,area_z,area_radius,zone_points) VALUES (?,?,?,?,?,?,?,?,?)',
         { data.identifier, data.name, json.encode(data.groups or {}), areaType, ax, ay, az, aRadius, zoneJson }
     )
 
@@ -38,14 +38,14 @@ RegisterNetEvent('ar_propmanager:updatePlayerAccess', function(data)
 
     local areaType, ax, ay, az, aRadius, zoneJson = decomposeArea(data.area)
     MySQL.query(
-        'UPDATE `ar_player_access` SET identifier=?,name=?,groups=?,area_type=?,area_x=?,area_y=?,area_z=?,area_radius=?,zone_points=? WHERE id=?',
+        'UPDATE `ar_props_player_access` SET identifier=?,name=?,groups=?,area_type=?,area_x=?,area_y=?,area_z=?,area_radius=?,zone_points=? WHERE id=?',
         { data.identifier, data.name, json.encode(data.groups or {}), areaType, ax, ay, az, aRadius, zoneJson, data.id }
     )
 end)
 
 RegisterNetEvent('ar_propmanager:deletePlayerAccess', function(id)
     if getPlayerLevel(source) < 3 then return end
-    MySQL.query('DELETE FROM `ar_player_access` WHERE id = ?', { id })
+    MySQL.query('DELETE FROM `ar_props_player_access` WHERE id = ?', { id })
 end)
 
 -- ─── Server callbacks ─────────────────────────────────────────────────────────
@@ -78,13 +78,15 @@ end
 local function buildPlayerPayload(source)
     local level = getPlayerLevel(source)
 
+    print(('Player %d has access level %d'):format(source, level))
+
     -- No ace — check if they have explicit player-access rows
     if level == 0 then
         local identifier = getIdentifier(source)
         if not identifier then return nil end
 
         local accessRows = MySQL.query.await(
-            'SELECT `groups` FROM `ar_player_access` WHERE identifier = ?',
+            'SELECT `groups` FROM `ar_props_player_access` WHERE identifier = ?',
             { identifier }
         )
         if not accessRows or #accessRows == 0 then return nil end
@@ -121,7 +123,7 @@ local function buildPlayerPayload(source)
     end
 
     if level >= 3 then
-        local rows   = MySQL.query.await('SELECT * FROM `ar_player_access`')
+        local rows   = MySQL.query.await('SELECT * FROM `ar_props_player_access`')
         local entries = {}
         for _, row in ipairs(rows or {}) do
             local ok, groupList = pcall(json.decode, row.groups)

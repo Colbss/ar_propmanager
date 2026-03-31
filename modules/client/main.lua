@@ -13,7 +13,7 @@ groupEnabled = {}
 spawnedProps = {}
 pendingSpawn = {}
 
-function despawnPropLocal(id)
+function despawnProp(id)
     pendingSpawn[id] = nil
     local entity = spawnedProps[id]
     if entity and DoesEntityExist(entity) then
@@ -52,7 +52,7 @@ local function applySpawnPayload(payload)
 
     for id in pairs(propCache) do
         if not newIds[id] then
-            despawnPropLocal(id)
+            despawnProp(id)
             propCache[id] = nil
         end
     end
@@ -94,7 +94,7 @@ CreateThread(function()
                     pendingSpawn[capturedId] = nil
                 end)
             elseif not shouldSpawn and spawnedProps[id] then
-                despawnPropLocal(id)
+                despawnProp(id)
             end
         end
     end

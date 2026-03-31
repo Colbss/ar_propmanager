@@ -58,7 +58,7 @@ local function pointInZone(px, py, points)
 end
 
 --- Checks whether a player has access to a group/position.
---- Players with level >= 2 always pass; level-0 players are checked against ar_player_access.
+--- Players with level >= 2 always pass; level-0 players are checked against ar_props_player_access.
 function hasPlayerAccess(source, group, position)
     if getPlayerLevel(source) >= 2 then return true end
 
@@ -66,7 +66,7 @@ function hasPlayerAccess(source, group, position)
     if not identifier then return false end
 
     local rows = MySQL.query.await(
-        'SELECT * FROM `ar_player_access` WHERE identifier = ? AND JSON_CONTAINS(`groups`, JSON_QUOTE(?))',
+        'SELECT * FROM `ar_props_player_access` WHERE identifier = ? AND JSON_CONTAINS(`groups`, JSON_QUOTE(?))',
         { identifier, group }
     )
     if not rows or #rows == 0 then return false end
@@ -186,7 +186,7 @@ local function createTables()
     ]])
 
     MySQL.query([[
-        CREATE TABLE IF NOT EXISTS `ar_player_access` (
+        CREATE TABLE IF NOT EXISTS `ar_props_player_access` (
             `id`          INT                   NOT NULL AUTO_INCREMENT,
             `identifier`  VARCHAR(64)           NOT NULL,
             `name`        VARCHAR(64)           NOT NULL,
@@ -223,7 +223,7 @@ local function loadData()
         }
     end
 
-    print(('[ar_propmanager] Loaded %d prop(s)'):format(#(propRows or {})))
+    print(string.format('^5Loaded %d prop(s)^7', #(propRows or {})))
 end
 
 MySQL.ready(function()
