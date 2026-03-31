@@ -51,17 +51,17 @@ const mockGroupStates: Record<string, boolean> = {
   'Vehicles': true,
 }
 const mockPlayerAccess = [
-  { id: 1, identifier: 'license:a1b2c3d4e5f6a1b2c3d4', name: 'John Doe',   groups: ['Street Furniture', 'Vehicles'], area: null },
-  { id: 2, identifier: 'license:f6e5d4c3b2a1f6e5d4c3', name: 'Jane Smith', groups: ['Nature'], area: { type: 'radius', center: { x: 215.4, y: -810.2 }, radius: 150 } },
-  { id: 3, identifier: 'license:c3b2a1f6e5d4c3b2a1f6', name: 'Bob Jones',  groups: ['Street Furniture'], area: { type: 'zone', points: [{ x: 100, y: -900 }, { x: 250, y: -900 }, { x: 250, y: -750 }, { x: 100, y: -750 }] } },
+  { id: 1, identifier: 'license:a1b2c3d4e5f6a1b2c3d4', name: 'John Doe',   groups: ['Street Furniture', 'Vehicles'], area: null,                                                                                                                              maxExpiry: null },
+  { id: 2, identifier: 'license:f6e5d4c3b2a1f6e5d4c3', name: 'Jane Smith', groups: ['Nature'],              area: { type: 'radius', center: { x: 215.4, y: -810.2 }, radius: 150 },                                                                         maxExpiry: 43200 },
+  { id: 3, identifier: 'license:c3b2a1f6e5d4c3b2a1f6', name: 'Bob Jones',  groups: ['Street Furniture'],    area: { type: 'zone', points: [{ x: 100, y: -900 }, { x: 250, y: -900 }, { x: 250, y: -750 }, { x: 100, y: -750 }] }, maxExpiry: 604800 },
 ]
 
 const mockRestrictedRadius = [
-  { id: 2, identifier: 'license:f6e5d4c3b2a1f6e5d4c3', name: 'Jane Smith', groups: ['Nature'], area: { type: 'radius', center: { x: 215.4, y: -810.2 }, radius: 150 } },
+  { id: 2, identifier: 'license:f6e5d4c3b2a1f6e5d4c3', name: 'Jane Smith', groups: ['Nature'],           area: { type: 'radius', center: { x: 215.4, y: -810.2 }, radius: 150 }, maxExpiry: 43200 },
 ]
 
 const mockRestrictedZone = [
-  { id: 3, identifier: 'license:c3b2a1f6e5d4c3b2a1f6', name: 'Bob Jones',  groups: ['Street Furniture'], area: { type: 'zone', points: [{ x: 100, y: -900 }, { x: 250, y: -900 }, { x: 250, y: -750 }, { x: 100, y: -750 }] } },
+  { id: 3, identifier: 'license:c3b2a1f6e5d4c3b2a1f6', name: 'Bob Jones',  groups: ['Street Furniture'], area: { type: 'zone', points: [{ x: 100, y: -900 }, { x: 250, y: -900 }, { x: 250, y: -750 }, { x: 100, y: -750 }] }, maxExpiry: 604800 },
 ]
 
 function buildMockProps() {

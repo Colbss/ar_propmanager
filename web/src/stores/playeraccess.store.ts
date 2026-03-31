@@ -21,6 +21,7 @@ export interface PlayerAccessEntry {
   name: string
   groups: string[]
   area: AreaRestriction | null
+  maxExpiry: number | null  // forced expiry duration in seconds, null = no limit
 }
 
 export const usePlayerAccessStore = defineStore('playerAccess', () => {

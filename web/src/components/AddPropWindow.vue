@@ -116,6 +116,12 @@ const canPlace = computed(() =>
   searchQuery.value.trim().length > 0 && form.group.trim().length > 0
 )
 
+function formatExpiry(seconds: number): string {
+  if (seconds < 3600)  return `${Math.round(seconds / 60)} minutes`
+  if (seconds < 86400) return `${Math.round(seconds / 3600)} hour${Math.round(seconds / 3600) !== 1 ? 's' : ''}`
+  return `${Math.round(seconds / 86400)} day${Math.round(seconds / 86400) !== 1 ? 's' : ''}`
+}
+
 // ─── Submit ───────────────────────────────────────────────────────────────────
 
 const placing = ref(false)
@@ -134,9 +140,11 @@ const place = async () => {
         model:          searchQuery.value.trim(),
         group:          form.group.trim(),
         renderDistance: form.renderDistance,
-        expiresAt:      form.hasExpiry && form.expiresAt
-          ? Math.floor(new Date(form.expiresAt).getTime() / 1000)
-          : null,
+        expiresAt:      addPropStore.maxExpiry
+          ? Math.floor(Date.now() / 1000) + addPropStore.maxExpiry
+          : form.hasExpiry && form.expiresAt
+            ? Math.floor(new Date(form.expiresAt).getTime() / 1000)
+            : null,
       }),
     },
     undefined,
@@ -249,18 +257,26 @@ const place = async () => {
 
     <!-- Expiry -->
     <div class="flex flex-col gap-1.5">
-      <label class="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-400">
-        <input v-model="form.hasExpiry" type="checkbox" class="accent-blue-500" />
-        Set Expiry
-      </label>
-      <Transition name="form-slide">
-        <input
-          v-if="form.hasExpiry"
-          v-model="form.expiresAt"
-          type="datetime-local"
-          class="rounded border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-100 outline-none transition focus:border-white/25 focus:bg-white/10 [color-scheme:dark]"
-        />
-      </Transition>
+      <template v-if="addPropStore.maxExpiry">
+        <div class="flex items-center gap-2 rounded border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+          <i class="pi pi-clock text-[0.7rem]" />
+          This prop will expire after {{ formatExpiry(addPropStore.maxExpiry) }}.
+        </div>
+      </template>
+      <template v-else>
+        <label class="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-400">
+          <input v-model="form.hasExpiry" type="checkbox" class="accent-blue-500" />
+          Set Expiry
+        </label>
+        <Transition name="form-slide">
+          <input
+            v-if="form.hasExpiry"
+            v-model="form.expiresAt"
+            type="datetime-local"
+            class="rounded border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-100 outline-none transition focus:border-white/25 focus:bg-white/10 [color-scheme:dark]"
+          />
+        </Transition>
+      </template>
     </div>
 
     <!-- Error -->

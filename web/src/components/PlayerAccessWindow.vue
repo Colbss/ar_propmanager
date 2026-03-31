@@ -16,7 +16,25 @@ const myEntry = computed(() => store.entries[0] ?? null)
 // ─── Form state ───────────────────────────────────────────────────────────────
 
 const showForm = ref(false)
-const editingId = ref<string | null>(null)
+const editingId = ref<number | null>(null)
+
+const EXPIRY_PRESETS: { label: string; value: number | null }[] = [
+  { label: 'None',  value: null },
+  { label: '1h',    value: 3600 },
+  { label: '6h',    value: 21600 },
+  { label: '12h',   value: 43200 },
+  { label: '1d',    value: 86400 },
+  { label: '3d',    value: 259200 },
+  { label: '7d',    value: 604800 },
+  { label: '30d',   value: 2592000 },
+]
+
+function formatExpiry(seconds: number | null): string {
+  if (!seconds) return 'None'
+  if (seconds < 3600)  return `${Math.round(seconds / 60)}m`
+  if (seconds < 86400) return `${Math.round(seconds / 3600)}h`
+  return `${Math.round(seconds / 86400)}d`
+}
 
 const emptyForm = () => ({
   name: '',
@@ -26,6 +44,7 @@ const emptyForm = () => ({
   areaType: 'radius' as 'radius' | 'zone',
   radiusArea: null as RadiusArea | null,
   zonePoints: [] as Array<{ x: number; y: number }>,
+  maxExpiry: null as number | null,
 })
 
 const form = reactive(emptyForm())
@@ -56,6 +75,7 @@ const openEdit = (entry: PlayerAccessEntry) => {
     form.zonePoints = []
   }
 
+  form.maxExpiry = entry.maxExpiry ?? null
   editingId.value = entry.id
   showForm.value = true
 }
@@ -93,6 +113,7 @@ const submitForm = () => {
     identifier: form.identifier.trim(),
     groups: [...form.groups],
     area: buildArea(),
+    maxExpiry: form.maxExpiry,
   }
 
   if (editingId.value) {
@@ -108,9 +129,9 @@ const submitForm = () => {
 
 // ─── Confirm delete ───────────────────────────────────────────────────────────
 
-const pendingDelete = ref<string | null>(null)
+const pendingDelete = ref<number | null>(null)
 
-const requestDelete = (id: string) => {
+const requestDelete = (id: number) => {
   if (pendingDelete.value === id) {
     store.deleteEntry(id)
     pendingDelete.value = null
@@ -159,6 +180,12 @@ function areaTitle(area: AreaRestriction | null) {
             {{ g }}
           </span>
         </div>
+      </div>
+
+      <!-- Forced expiry -->
+      <div v-if="myEntry.maxExpiry" class="flex flex-col gap-1">
+        <span class="text-xs text-slate-500">Forced Expiry</span>
+        <span class="text-xs text-amber-300">Props you place will expire after {{ formatExpiry(myEntry.maxExpiry) }}.</span>
       </div>
 
       <!-- Area -->
@@ -323,6 +350,26 @@ function areaTitle(area: AreaRestriction | null) {
           </div>
         </Transition>
 
+        <!-- Forced expiry -->
+        <div class="mt-3">
+          <label class="mb-1 block text-xs text-slate-400">Force Expiry</label>
+          <div class="flex flex-wrap gap-1">
+            <button
+              v-for="preset in EXPIRY_PRESETS"
+              :key="String(preset.value)"
+              type="button"
+              class="rounded px-2.5 py-1 text-xs transition"
+              :class="form.maxExpiry === preset.value
+                ? 'bg-amber-600/50 text-amber-200 ring-1 ring-amber-500/40'
+                : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
+              @click.stop="form.maxExpiry = preset.value"
+            >{{ preset.label }}</button>
+          </div>
+          <p v-if="form.maxExpiry" class="mt-1 text-[0.7rem] text-slate-500">
+            Props placed by this player will expire after {{ formatExpiry(form.maxExpiry) }}.
+          </p>
+        </div>
+
         <!-- Form actions -->
         <div class="mt-3 flex justify-end gap-2">
           <button
@@ -343,7 +390,7 @@ function areaTitle(area: AreaRestriction | null) {
     </Transition>
 
     <!-- Access list -->
-    <div class="max-h-[40vh] overflow-y-auto">
+    <div v-if="!showForm" class="max-h-[40vh] overflow-y-auto">
       <div v-if="store.entries.length === 0" class="py-8 text-center text-xs text-slate-500">
         No players have been granted access.
       </div>
@@ -374,6 +421,15 @@ function areaTitle(area: AreaRestriction | null) {
           :title="areaTitle(entry.area)"
         >
           {{ areaLabel(entry.area) }}
+        </span>
+
+        <!-- Expiry badge -->
+        <span
+          v-if="entry.maxExpiry"
+          class="shrink-0 rounded bg-amber-500/15 px-2 py-0.5 text-xs text-amber-400"
+          :title="`Props expire after ${formatExpiry(entry.maxExpiry)}`"
+        >
+          <i class="pi pi-clock mr-0.5 text-[0.6rem]" />{{ formatExpiry(entry.maxExpiry) }}
         </span>
 
         <!-- Actions -->

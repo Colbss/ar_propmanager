@@ -30,6 +30,7 @@ function applyPayload(data: OpenPropManagerPayload) {
   if (data.playerAccess) accessStore.entries = data.playerAccess
   if (data.groups) accessStore.availableGroups = data.groups
   addPropStore.allowedGroups = data.level === 0 ? (data.playerAccess?.[0]?.groups ?? []) : []
+  addPropStore.maxExpiry     = data.level === 0 ? (data.playerAccess?.[0]?.maxExpiry ?? null) : null
 }
 
 useNuiEvent<OpenPropManagerPayload>('openPropManager', (data) => {
