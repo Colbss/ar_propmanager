@@ -14,10 +14,6 @@ end
 
 -- ─── Prop NUI callbacks ───────────────────────────────────────────────────────
 
-RegisterNUICallback('GetPropList', function(_, cb)
-    cb(require 'config/props')
-end)
-
 RegisterNUICallback('PlaceProp', function(data, cb)
     local model = data.model
     if not model or model == '' then cb('error') return end

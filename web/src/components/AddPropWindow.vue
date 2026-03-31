@@ -11,21 +11,38 @@ const propStore    = usePropManagerStore()
 
 // ─── Prop list ────────────────────────────────────────────────────────────────
 
-const propList    = ref<string[]>([])
-const listLoading = ref(true)
+const PROP_LIST_URL = 'https://raw.githubusercontent.com/DurtyFree/gta-v-data-dumps/refs/heads/master/ObjectList.ini'
 
-onMounted(async () => {
-  const result = await useApi<string[]>(
-    'GetPropList',
-    { method: 'POST', body: JSON.stringify({}) },
-    undefined,
-    [
+// Module-level cache — survives tab switches, fetched at most once per session
+let _cachedPropList: string[] | null = null
+
+async function loadPropList(): Promise<string[]> {
+  if (_cachedPropList) return _cachedPropList
+
+  try {
+    const res = await fetch(PROP_LIST_URL)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const text = await res.text()
+    _cachedPropList = text
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && !l.startsWith('[') && !l.startsWith(';') && !l.startsWith('#'))
+    return _cachedPropList
+  } catch {
+    _cachedPropList = [
       'prop_bench_01a', 'prop_bench_01b', 'prop_tree_pine_01a',
       'prop_streetlight_01', 'prop_bin_01a', 'prop_bollard_01',
       'prop_barrier_01a', 'prop_cone_01', 'prop_box_wood01a',
     ]
-  )
-  propList.value = result.data.value ?? []
+    return _cachedPropList
+  }
+}
+
+const propList    = ref<string[]>([])
+const listLoading = ref(true)
+
+onMounted(async () => {
+  propList.value = await loadPropList()
   listLoading.value = false
 })
 
