@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { usePropManagerStore } from '../stores/propmanager.store'
-import { useAddPropStore } from '../stores/addprop.store'
 
-const props = defineProps<{ canManage: boolean; canAdd: boolean; canTeleport: boolean }>()
+const props = defineProps<{ canManage: boolean; canTeleport: boolean }>()
 
 const store = usePropManagerStore()
-const addPropStore = useAddPropStore()
 
 // ─── Group collapse state (persisted in store) ────────────────────────────────
 
@@ -47,17 +45,6 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
 
 <template>
   <div class="flex flex-col" @mousedown="cancelDelete">
-    <!-- Toolbar -->
-    <div v-if="props.canAdd" class="flex items-center justify-end border-b border-white/10 px-3 py-1.5">
-      <button
-        class="flex items-center gap-1.5 rounded bg-blue-600/70 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-blue-500/80"
-        @click.stop="addPropStore.isVisible = true"
-      >
-        <i class="pi pi-plus text-[0.7rem]" />
-        Add Prop
-      </button>
-    </div>
-
     <!-- Prop list -->
     <div class="max-h-[45vh] overflow-y-auto">
       <div v-if="store.groups.size === 0" class="py-8 text-center text-xs text-slate-500">

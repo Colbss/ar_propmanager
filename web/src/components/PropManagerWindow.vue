@@ -2,9 +2,11 @@
 import { computed, ref } from 'vue'
 import { useDraggable } from '@vueuse/core'
 import PropListWindow from './PropListWindow.vue'
+import AddPropWindow from './AddPropWindow.vue'
 import PlayerAccessWindow from './PlayerAccessWindow.vue'
 import PropMapWindow from './PropMapWindow.vue'
-type Tab = 'props' | 'permissions' | 'map'
+
+type Tab = 'props' | 'add-prop' | 'map' | 'permissions'
 
 const props = defineProps<{
   activeTab: Tab
@@ -29,15 +31,19 @@ const { style } = useDraggable(windowEl, {
   },
 })
 
+const canAdd = computed(() => props.level >= 2 || props.level === 0)
+
 const ALL_TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'props',       label: 'Props',        icon: 'pi-list'  },
-  { key: 'map',         label: 'Map',           icon: 'pi-map'   },
-  { key: 'permissions', label: 'Player Access', icon: 'pi-users' },
+  { key: 'props',       label: 'Props',        icon: 'pi-list'      },
+  { key: 'add-prop',    label: 'Add Prop',      icon: 'pi-plus'      },
+  { key: 'map',         label: 'Map',           icon: 'pi-map'       },
+  { key: 'permissions', label: 'Player Access', icon: 'pi-users'     },
 ]
 
 const visibleTabs = computed(() =>
   ALL_TABS.filter((tab) => {
     if (tab.key === 'props')       return props.level >= 1 || props.level === 0
+    if (tab.key === 'add-prop')    return canAdd.value
     if (tab.key === 'map')         return props.level >= 2
     if (tab.key === 'permissions') return props.level >= 3 || props.level === 0
     return false
@@ -87,9 +93,17 @@ const visibleTabs = computed(() =>
 
       <!-- Tab content -->
       <div class="flex min-h-[50vh] flex-col">
-        <PropListWindow     v-if="activeTab === 'props'"       :can-manage="level >= 2" :can-add="level >= 2 || level === 0" :can-teleport="level >= 1" />
-        <PropMapWindow      v-else-if="activeTab === 'map'"    />
-        <PlayerAccessWindow v-else                             :level="level" />
+        <PropListWindow
+          v-if="activeTab === 'props'"
+          :can-manage="level >= 2"
+          :can-teleport="level >= 1"
+        />
+        <AddPropWindow
+          v-else-if="activeTab === 'add-prop'"
+          @done="emit('update:activeTab', 'props')"
+        />
+        <PropMapWindow      v-else-if="activeTab === 'map'"         />
+        <PlayerAccessWindow v-else                                   :level="level" />
       </div>
     </div>
   </Transition>
