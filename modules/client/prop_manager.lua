@@ -12,6 +12,11 @@ local function ClosePropManager()
     SendNUIMessage({ action = 'closePropManager', data = {} })
 end
 
+RegisterNUICallback('ClosePropManager', function(_, cb)
+    SetNuiFocus(false, false)
+    cb('ok')
+end)
+
 -- ─── Prop NUI callbacks ───────────────────────────────────────────────────────
 
 RegisterNUICallback('PlaceProp', function(data, cb)
@@ -234,9 +239,56 @@ RegisterCommand('test_prop_manager', function()
     OpenPropManager({ props = propList, groupStates = groupStates })
 end, false)
 
+local function buildPropEntryFromCache(id, prop)
+    return {
+        id             = id,
+        model          = prop.model,
+        position       = prop.position,
+        quaternion     = prop.quaternion,
+        group          = prop.group,
+        outlined       = false,
+        renderDistance = prop.renderDistance or 200,
+        expiresAt      = prop.expiresAt,
+    }
+end
+
 RegisterCommand('manage_props', function()
-    lib.callback('ar_propmanager:getProps', false, function(payload)
-        if payload then OpenPropManager(payload) end
+    lib.callback('ar_propmanager:getOpenData', false, function(openData)
+        if not openData then return end
+
+        local props       = {}
+        local groupStates = {}
+
+        if openData.level == 0 then
+            -- Restricted player: only show props from their allowed groups
+            local allowed = {}
+            for _, entry in ipairs(openData.playerAccess or {}) do
+                for _, g in ipairs(entry.groups or {}) do allowed[g] = true end
+            end
+            for id, prop in pairs(propCache) do
+                if allowed[prop.group] then
+                    props[#props + 1]       = buildPropEntryFromCache(id, prop)
+                    groupStates[prop.group] = groupEnabled[prop.group]
+                end
+            end
+        else
+            for id, prop in pairs(propCache) do
+                props[#props + 1] = buildPropEntryFromCache(id, prop)
+            end
+            for name, enabled in pairs(groupEnabled) do
+                groupStates[name] = enabled
+            end
+        end
+
+        local payload = {
+            level       = openData.level,
+            props       = props,
+            groupStates = groupStates,
+        }
+        if openData.playerAccess then payload.playerAccess = openData.playerAccess end
+        if openData.groups       then payload.groups       = openData.groups end
+
+        OpenPropManager(payload)
     end)
 end, false)
 

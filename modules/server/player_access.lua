@@ -149,6 +149,68 @@ lib.callback.register('ar_propmanager:getProps', function(source)
     return buildPlayerPayload(source)
 end)
 
+--- Lightweight callback — returns only what the client can't derive locally:
+--- level, and for level 0: their access entries; for level 3: all entries + group names.
+--- The client builds props/groupStates itself from propCache/groupEnabled.
+lib.callback.register('ar_propmanager:getOpenData', function(source)
+    local level = getPlayerLevel(source)
+
+    if level == 0 then
+        local identifier = getIdentifier(source)
+        if not identifier then return nil end
+
+        local rows = MySQL.query.await(
+            'SELECT * FROM `ar_props_player_access` WHERE identifier = ?',
+            { identifier }
+        )
+        if not rows or #rows == 0 then return nil end
+
+        local entries  = {}
+        local anyGroup = false
+        for _, row in ipairs(rows) do
+            local ok, groupList = pcall(json.decode, row.groups)
+            local groupArr = (ok and groupList) or {}
+            if #groupArr > 0 then anyGroup = true end
+            entries[#entries + 1] = {
+                id         = row.id,
+                identifier = row.identifier,
+                name       = row.name,
+                groups     = groupArr,
+                area       = rowToArea(row),
+                maxExpiry  = row.max_expiry,
+            }
+        end
+        if not anyGroup then return nil end
+
+        return { level = 0, playerAccess = entries }
+    end
+
+    local payload = { level = level }
+
+    if level >= 3 then
+        local rows   = MySQL.query.await('SELECT * FROM `ar_props_player_access`')
+        local entries = {}
+        for _, row in ipairs(rows or {}) do
+            local ok, groupList = pcall(json.decode, row.groups)
+            entries[#entries + 1] = {
+                id         = row.id,
+                identifier = row.identifier,
+                name       = row.name,
+                groups     = (ok and groupList) or {},
+                area       = rowToArea(row),
+                maxExpiry  = row.max_expiry,
+            }
+        end
+        payload.playerAccess = entries
+
+        local groupNames = {}
+        for name in pairs(groups) do groupNames[#groupNames + 1] = name end
+        payload.groups = groupNames
+    end
+
+    return payload
+end)
+
 --- Returns the full spawn payload for client-side rendering (no access filtering).
 lib.callback.register('ar_propmanager:getSpawnData', function()
     return buildSyncPayload()

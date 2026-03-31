@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import PropManagerWindow from './PropManagerWindow.vue'
 import { useNuiEvent } from '../composables/useNuiEvent'
+import { useApi } from '../composables/useApi'
 import { usePropManagerStore, type PropEntry } from '../stores/propmanager.store'
 import { usePlayerAccessStore, type PlayerAccessEntry } from '../stores/playeraccess.store'
 import { useAddPropStore } from '../stores/addprop.store'
@@ -76,6 +77,6 @@ useNuiEvent('closePropManager', () => {
     v-if="windowVisible"
     v-model:activeTab="activeTab"
     :level="level"
-    @close="windowVisible = false"
+    @close="useApi('ClosePropManager', { method: 'POST', body: '{}' }, undefined, {}).then(() => { windowVisible = false })"
   />
 </template>

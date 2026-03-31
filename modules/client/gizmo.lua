@@ -82,10 +82,10 @@ keybinds.cancel:disable(true)
 
 function keybinds.GetKeybinds()
     return {
-        mode   = { key = GetKeyLabel(keybinds.mode.hash),   description = keybinds.mode.description },
-        focus  = { key = GetKeyLabel(keybinds.focus.hash),  description = keybinds.focus.description },
-        finish = { key = GetKeyLabel(keybinds.finish.hash), description = keybinds.finish.description },
-        cancel = { key = GetKeyLabel(keybinds.cancel.hash), description = keybinds.cancel.description },
+        mode   = { key = GetKeyLabel(keybinds.mode.hash),   description = locale('keybind_mode') },
+        focus  = { key = GetKeyLabel(keybinds.focus.hash),  description = locale('keybind_focus') },
+        finish = { key = GetKeyLabel(keybinds.finish.hash), description = locale('keybind_finish') },
+        cancel = { key = GetKeyLabel(keybinds.cancel.hash), description = locale('keybind_cancel') },
     }
 end
 
