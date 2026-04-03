@@ -50,6 +50,22 @@ end)
 
 -- ─── Server callbacks ─────────────────────────────────────────────────────────
 
+lib.callback.register('ar_propmanager:getOnlinePlayers', function(source)
+    if getPlayerLevel(source) < 3 then return {} end
+
+    local players = {}
+    for _, playerId in ipairs(GetPlayers()) do
+        local identifier = getIdentifier(tonumber(playerId))
+        if identifier then
+            players[#players + 1] = {
+                name       = GetPlayerName(playerId),
+                identifier = identifier,
+            }
+        end
+    end
+    return players
+end)
+
 lib.callback.register('ar_propmanager:canInteractWithProp', function(source, propId)
     for gName, group in pairs(groups) do
         if group.props[propId] then

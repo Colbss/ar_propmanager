@@ -134,6 +134,12 @@ end)
 
 -- ─── Player access NUI callbacks ──────────────────────────────────────────────
 
+RegisterNUICallback('GetOnlinePlayers', function(_, cb)
+    lib.callback('ar_propmanager:getOnlinePlayers', false, function(players)
+        cb(players or {})
+    end)
+end)
+
 RegisterNUICallback('AddPlayerAccess', function(data, cb)
     TriggerServerEvent('ar_propmanager:addPlayerAccess', data)
     cb('ok')

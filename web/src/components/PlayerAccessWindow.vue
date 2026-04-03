@@ -52,7 +52,9 @@ const form = reactive(emptyForm())
 const openAdd = () => {
   Object.assign(form, emptyForm())
   editingId.value = null
+  playerSearch.value = ''
   showForm.value = true
+  store.loadOnlinePlayers()
 }
 
 const openEdit = (entry: PlayerAccessEntry) => {
@@ -90,6 +92,28 @@ const buildArea = (): AreaRestriction | null => {
   if (form.areaType === 'zone') return { type: 'zone', points: [...form.zonePoints] }
   return form.radiusArea?.type === 'radius' ? form.radiusArea : null
 }
+
+// ─── Online player picker ─────────────────────────────────────────────────────
+
+import type { OnlinePlayer } from '../stores/playeraccess.store'
+
+const playerSearch = ref('')
+
+const filteredPlayers = computed(() => {
+  const q = playerSearch.value.trim().toLowerCase()
+  if (!q) return store.onlinePlayers
+  return store.onlinePlayers.filter(
+    (p) => p.name.toLowerCase().includes(q) || p.identifier.toLowerCase().includes(q)
+  )
+})
+
+const selectPlayer = (p: OnlinePlayer) => {
+  form.name       = p.name
+  form.identifier = p.identifier
+  playerSearch.value = ''
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const customGroup = ref('')
 
@@ -222,20 +246,65 @@ function areaTitle(area: AreaRestriction | null) {
       <div v-if="showForm" class="border-b border-white/10 bg-white/5 p-4">
         <div class="mb-3 text-xs font-semibold text-slate-300">{{ editingId ? 'Edit Access Entry' : 'Grant Player Access' }}</div>
 
-        <div class="mb-2 grid grid-cols-2 gap-2">
-          <!-- Name -->
-          <div class="flex flex-col gap-1">
-            <label class="text-xs text-slate-400">Player Name</label>
-            <input
-              v-model="form.name"
-              type="text"
-              placeholder="e.g. John"
-              class="rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-white/25 focus:bg-white/10"
-            />
+        <div class="mb-2 flex flex-col gap-2">
+          <!-- Player selector (new entry) -->
+          <div v-if="!editingId" class="flex flex-col gap-1">
+            <label class="text-xs text-slate-400">Player</label>
+            <!-- Selected player chip -->
+            <div
+              v-if="form.name && form.identifier"
+              class="flex items-center gap-2 rounded border border-white/10 bg-white/5 px-2.5 py-1.5"
+            >
+              <div class="flex min-w-0 flex-1 flex-col">
+                <span class="text-xs font-medium text-slate-100">{{ form.name }}</span>
+                <span class="truncate font-mono text-[0.65rem] text-slate-500">{{ form.identifier }}</span>
+              </div>
+              <button
+                type="button"
+                class="shrink-0 text-slate-500 transition hover:text-slate-300"
+                @click.stop="form.name = ''; form.identifier = ''"
+              >
+                <i class="pi pi-times text-[0.7rem]" />
+              </button>
+            </div>
+            <!-- Search + dropdown -->
+            <template v-else>
+              <input
+                v-model="playerSearch"
+                type="text"
+                placeholder="Search online players…"
+                class="rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-white/25 focus:bg-white/10"
+              />
+              <div class="flex max-h-32 flex-col overflow-y-auto rounded border border-white/10 bg-black/40">
+                <div v-if="store.loadingPlayers" class="py-3 text-center text-xs text-slate-500">Loading…</div>
+                <div v-else-if="filteredPlayers.length === 0" class="py-3 text-center text-xs text-slate-500">
+                  {{ playerSearch ? 'No players found' : 'No players online' }}
+                </div>
+                <button
+                  v-for="p in filteredPlayers"
+                  :key="p.identifier"
+                  type="button"
+                  class="flex flex-col px-2.5 py-1.5 text-left transition hover:bg-white/10"
+                  @click.stop="selectPlayer(p)"
+                >
+                  <span class="text-xs text-slate-200">{{ p.name }}</span>
+                  <span class="truncate font-mono text-[0.65rem] text-slate-500">{{ p.identifier }}</span>
+                </button>
+              </div>
+            </template>
+          </div>
+
+          <!-- Readonly player info (edit entry) -->
+          <div v-else class="flex flex-col gap-1">
+            <label class="text-xs text-slate-400">Player</label>
+            <div class="rounded border border-white/10 bg-white/5 px-2.5 py-1.5">
+              <span class="text-xs font-medium text-slate-100">{{ form.name }}</span>
+              <div class="mt-0.5 truncate select-all font-mono text-[0.65rem] text-slate-500">{{ form.identifier }}</div>
+            </div>
           </div>
 
           <!-- Groups -->
-          <div class="col-span-2 flex flex-col gap-1">
+          <div class="flex flex-col gap-1">
             <label class="text-xs text-slate-400">
               Groups
               <span v-if="form.groups.length" class="ml-1 text-slate-500">({{ form.groups.length }} selected)</span>
@@ -286,17 +355,6 @@ function areaTitle(area: AreaRestriction | null) {
                 Add
               </button>
             </div>
-          </div>
-
-          <!-- Identifier (full width) -->
-          <div class="col-span-2 flex flex-col gap-1">
-            <label class="text-xs text-slate-400">Identifier</label>
-            <input
-              v-model="form.identifier"
-              type="text"
-              placeholder="e.g. license:abc123…"
-              class="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-xs text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-white/25 focus:bg-white/10"
-            />
           </div>
         </div>
 

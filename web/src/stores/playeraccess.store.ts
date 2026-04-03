@@ -24,10 +24,38 @@ export interface PlayerAccessEntry {
   maxExpiry: number | null  // forced expiry duration in seconds, null = no limit
 }
 
+export interface OnlinePlayer {
+  name: string
+  identifier: string
+}
+
+const mockOnlinePlayers: OnlinePlayer[] = [
+  { name: 'John Doe',      identifier: 'license:a1b2c3d4e5f6a1b2c3d4' },
+  { name: 'Jane Smith',    identifier: 'license:f6e5d4c3b2a1f6e5d4c3' },
+  { name: 'Bob Jones',     identifier: 'license:c3b2a1f6e5d4c3b2a1f6' },
+  { name: 'Alice Walker',  identifier: 'license:1234567890abcdef1234' },
+  { name: 'Charlie Brown', identifier: 'license:abcdef1234567890abcd' },
+]
+
 export const usePlayerAccessStore = defineStore('playerAccess', () => {
   const isVisible = ref(false)
   const entries = ref<PlayerAccessEntry[]>([])
   const availableGroups = ref<string[]>([])
+  const onlinePlayers = ref<OnlinePlayer[]>([])
+  const loadingPlayers = ref(false)
+
+  const loadOnlinePlayers = () => {
+    loadingPlayers.value = true
+    useApi<OnlinePlayer[]>(
+      'GetOnlinePlayers',
+      { method: 'POST', body: JSON.stringify({}) },
+      {},
+      mockOnlinePlayers,
+    ).then((result) => {
+      onlinePlayers.value = result.data?.value ?? []
+      loadingPlayers.value = false
+    })
+  }
 
   const addEntry = (data: Omit<PlayerAccessEntry, 'id'>) => {
     useApi<PlayerAccessEntry>(
@@ -58,5 +86,5 @@ export const usePlayerAccessStore = defineStore('playerAccess', () => {
       })
   }
 
-  return { isVisible, entries, availableGroups, addEntry, updateEntry, deleteEntry }
+  return { isVisible, entries, availableGroups, onlinePlayers, loadingPlayers, loadOnlinePlayers, addEntry, updateEntry, deleteEntry }
 })
