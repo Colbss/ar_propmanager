@@ -1,25 +1,20 @@
 -- ─── Player access events ─────────────────────────────────────────────────────
 
---- Builds flat DB column values from the area object sent by the UI.
---- Returns: areaType, ax, ay, az, aRadius, zoneJson
-local function decomposeArea(area)
-    if not area then return nil, nil, nil, nil, nil, nil end
-    if area.type == 'zone' then
-        return 'zone', nil, nil, nil, nil, area.points and json.encode(area.points) or nil
-    end
-    local c = area.center or {}
-    return 'radius', c.x, c.y, c.z, area.radius, nil
+--- Decodes the zones JSON column into a Lua table (array of zone point arrays).
+local function rowToZones(row)
+    if not row.zones then return {} end
+    local ok, zones = pcall(json.decode, row.zones)
+    if ok and zones then return zones end
+    return {}
 end
 
---- data: { identifier, name, groups, area? }
+--- data: { identifier, name, groups, zones? }
 RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
     if getPlayerLevel(source) < 3 then return end
 
-    local areaType, ax, ay, az, aRadius, zoneJson = decomposeArea(data.area)
-
     local id = MySQL.insert.await(
-        'INSERT INTO `ar_props_player_access` (identifier,name,groups,area_type,area_x,area_y,area_z,area_radius,zone_points) VALUES (?,?,?,?,?,?,?,?,?)',
-        { data.identifier, data.name, json.encode(data.groups or {}), areaType, ax, ay, az, aRadius, zoneJson }
+        'INSERT INTO `ar_props_player_access` (identifier,name,groups,zones) VALUES (?,?,?,?)',
+        { data.identifier, data.name, json.encode(data.groups or {}), json.encode(data.zones or {}) }
     )
 
     -- Return confirmed record so UI can swap the optimistic temp id
@@ -28,18 +23,17 @@ RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
         identifier = data.identifier,
         name       = data.name,
         groups     = data.groups or {},
-        area       = data.area,
+        zones      = data.zones or {},
     })
 end)
 
---- data: { id, identifier, name, groups, area? }
+--- data: { id, identifier, name, groups, zones? }
 RegisterNetEvent('ar_propmanager:updatePlayerAccess', function(data)
     if getPlayerLevel(source) < 3 then return end
 
-    local areaType, ax, ay, az, aRadius, zoneJson = decomposeArea(data.area)
     MySQL.query(
-        'UPDATE `ar_props_player_access` SET identifier=?,name=?,groups=?,area_type=?,area_x=?,area_y=?,area_z=?,area_radius=?,zone_points=? WHERE id=?',
-        { data.identifier, data.name, json.encode(data.groups or {}), areaType, ax, ay, az, aRadius, zoneJson, data.id }
+        'UPDATE `ar_props_player_access` SET identifier=?,name=?,groups=?,zones=? WHERE id=?',
+        { data.identifier, data.name, json.encode(data.groups or {}), json.encode(data.zones or {}), data.id }
     )
 end)
 
@@ -74,21 +68,6 @@ lib.callback.register('ar_propmanager:canInteractWithProp', function(source, pro
     end
     return getPlayerLevel(source) >= 2
 end)
-
---- Converts a DB row's area columns into the AreaRestriction shape expected by the UI.
-local function rowToArea(row)
-    if row.area_type == 'zone' and row.zone_points then
-        local ok, pts = pcall(json.decode, row.zone_points)
-        if ok then return { type = 'zone', points = pts } end
-    elseif row.area_type == 'radius' and row.area_x ~= nil then
-        return {
-            type   = 'radius',
-            center = { x = row.area_x, y = row.area_y, z = row.area_z },
-            radius = row.area_radius,
-        }
-    end
-    return nil
-end
 
 --- Builds a prop-manager payload for `source`. Returns nil if the player has no access.
 local function buildPlayerPayload(source)
@@ -139,7 +118,7 @@ local function buildPlayerPayload(source)
     end
 
     if level >= 3 then
-        local rows   = MySQL.query.await('SELECT * FROM `ar_props_player_access`')
+        local rows    = MySQL.query.await('SELECT * FROM `ar_props_player_access`')
         local entries = {}
         for _, row in ipairs(rows or {}) do
             local ok, groupList = pcall(json.decode, row.groups)
@@ -148,7 +127,7 @@ local function buildPlayerPayload(source)
                 identifier = row.identifier,
                 name       = row.name,
                 groups     = (ok and groupList) or {},
-                area       = rowToArea(row),
+                zones      = rowToZones(row),
             }
         end
         payload.playerAccess = entries
@@ -192,7 +171,7 @@ lib.callback.register('ar_propmanager:getOpenData', function(source)
                 identifier = row.identifier,
                 name       = row.name,
                 groups     = groupArr,
-                area       = rowToArea(row),
+                zones      = rowToZones(row),
                 maxExpiry  = row.max_expiry,
             }
         end
@@ -204,7 +183,7 @@ lib.callback.register('ar_propmanager:getOpenData', function(source)
     local payload = { level = level }
 
     if level >= 3 then
-        local rows   = MySQL.query.await('SELECT * FROM `ar_props_player_access`')
+        local rows    = MySQL.query.await('SELECT * FROM `ar_props_player_access`')
         local entries = {}
         for _, row in ipairs(rows or {}) do
             local ok, groupList = pcall(json.decode, row.groups)
@@ -213,7 +192,7 @@ lib.callback.register('ar_propmanager:getOpenData', function(source)
                 identifier = row.identifier,
                 name       = row.name,
                 groups     = (ok and groupList) or {},
-                area       = rowToArea(row),
+                zones      = rowToZones(row),
                 maxExpiry  = row.max_expiry,
             }
         end

@@ -72,22 +72,15 @@ function hasPlayerAccess(source, group, position)
     if not rows or #rows == 0 then return false end
 
     for _, row in ipairs(rows) do
-        if row.area_x == nil and (row.area_type == nil or row.zone_points == nil) then
-            return true
-        end
+        if not row.zones then return true end -- no zone restriction
 
         if not position then return true end
 
-        local areaType = row.area_type or 'radius'
+        local ok, zones = pcall(json.decode, row.zones)
+        if not ok or not zones or #zones == 0 then return true end
 
-        if areaType == 'zone' and row.zone_points then
-            local ok, pts = pcall(json.decode, row.zone_points)
-            if ok and pointInZone(position.x, position.y, pts) then return true end
-        elseif areaType == 'radius' and row.area_x ~= nil then
-            local dx = position.x - row.area_x
-            local dy = position.y - row.area_y
-            local dz = position.z - row.area_z
-            if math.sqrt(dx * dx + dy * dy + dz * dz) <= row.area_radius then return true end
+        for _, zone in ipairs(zones) do
+            if pointInZone(position.x, position.y, zone) then return true end
         end
     end
     return false
@@ -187,16 +180,11 @@ local function createTables()
 
     MySQL.query([[
         CREATE TABLE IF NOT EXISTS `ar_props_player_access` (
-            `id`          INT                   NOT NULL AUTO_INCREMENT,
-            `identifier`  VARCHAR(64)           NOT NULL,
-            `name`        VARCHAR(64)           NOT NULL,
-            `groups`      JSON                  NOT NULL,
-            `area_type`   ENUM('radius','zone') NULL DEFAULT NULL,
-            `area_x`      FLOAT                 NULL,
-            `area_y`      FLOAT                 NULL,
-            `area_z`      FLOAT                 NULL,
-            `area_radius` FLOAT                 NULL,
-            `zone_points` JSON                  NULL,
+            `id`         INT         NOT NULL AUTO_INCREMENT,
+            `identifier` VARCHAR(64) NOT NULL,
+            `name`       VARCHAR(64) NOT NULL,
+            `groups`     JSON        NOT NULL,
+            `zones`      JSON        NULL,
             PRIMARY KEY (`id`),
             INDEX `idx_identifier` (`identifier`)
         )

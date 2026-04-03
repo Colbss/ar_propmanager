@@ -51,17 +51,41 @@ const mockGroupStates: Record<string, boolean> = {
   'Vehicles': true,
 }
 const mockPlayerAccess = [
-  { id: 1, identifier: 'license:a1b2c3d4e5f6a1b2c3d4', name: 'John Doe',   groups: ['Street Furniture', 'Vehicles'], area: null,                                                                                                                              maxExpiry: null },
-  { id: 2, identifier: 'license:f6e5d4c3b2a1f6e5d4c3', name: 'Jane Smith', groups: ['Nature'],              area: { type: 'radius', center: { x: 215.4, y: -810.2 }, radius: 150 },                                                                         maxExpiry: 43200 },
-  { id: 3, identifier: 'license:c3b2a1f6e5d4c3b2a1f6', name: 'Bob Jones',  groups: ['Street Furniture'],    area: { type: 'zone', points: [{ x: 100, y: -900 }, { x: 250, y: -900 }, { x: 250, y: -750 }, { x: 100, y: -750 }] }, maxExpiry: 604800 },
-]
-
-const mockRestrictedRadius = [
-  { id: 2, identifier: 'license:f6e5d4c3b2a1f6e5d4c3', name: 'Jane Smith', groups: ['Nature'],           area: { type: 'radius', center: { x: 215.4, y: -810.2 }, radius: 150 }, maxExpiry: 43200 },
+  {
+    id: 1, identifier: 'license:a1b2c3d4e5f6a1b2c3d4', name: 'John Doe',
+    groups: ['Street Furniture', 'Vehicles'],
+    zones: [],
+    maxExpiry: null,
+  },
+  {
+    id: 2, identifier: 'license:f6e5d4c3b2a1f6e5d4c3', name: 'Jane Smith',
+    groups: ['Nature'],
+    zones: [
+      [{ x: 150, y: -900 }, { x: 300, y: -900 }, { x: 300, y: -750 }, { x: 150, y: -750 }],
+    ],
+    maxExpiry: 43200,
+  },
+  {
+    id: 3, identifier: 'license:c3b2a1f6e5d4c3b2a1f6', name: 'Bob Jones',
+    groups: ['Street Furniture'],
+    zones: [
+      [{ x: 100, y: -900 }, { x: 250, y: -900 }, { x: 250, y: -750 }, { x: 100, y: -750 }],
+      [{ x: -400, y: -200 }, { x: -200, y: -200 }, { x: -200, y: 0 }, { x: -400, y: 0 }],
+    ],
+    maxExpiry: 604800,
+  },
 ]
 
 const mockRestrictedZone = [
-  { id: 3, identifier: 'license:c3b2a1f6e5d4c3b2a1f6', name: 'Bob Jones',  groups: ['Street Furniture'], area: { type: 'zone', points: [{ x: 100, y: -900 }, { x: 250, y: -900 }, { x: 250, y: -750 }, { x: 100, y: -750 }] }, maxExpiry: 604800 },
+  {
+    id: 3, identifier: 'license:c3b2a1f6e5d4c3b2a1f6', name: 'Bob Jones',
+    groups: ['Street Furniture'],
+    zones: [
+      [{ x: 100, y: -900 }, { x: 250, y: -900 }, { x: 250, y: -750 }, { x: 100, y: -750 }],
+      [{ x: -400, y: -200 }, { x: -200, y: -200 }, { x: -200, y: 0 }, { x: -400, y: 0 }],
+    ],
+    maxExpiry: 604800,
+  },
 ]
 
 function buildMockProps() {
@@ -101,8 +125,7 @@ const items = [
       pmStore.showOverlay = false
     }
   },
-  { label: 'Prop Manager — Level 0 (restricted · radius)', command: () => testPropManager(0, mockRestrictedRadius) },
-  { label: 'Prop Manager — Level 0 (restricted · zone)',   command: () => testPropManager(0, mockRestrictedZone) },
+  { label: 'Prop Manager — Level 0 (restricted · zone)',        command: () => testPropManager(0, mockRestrictedZone) },
   { label: 'Prop Manager — Level 1 (toggle groups)',       command: () => testPropManager(1) },
   { label: 'Prop Manager — Level 2 (manage)',              command: () => testPropManager(2) },
   { label: 'Prop Manager — Level 3 (player access)',       command: () => testPropManager(3) },

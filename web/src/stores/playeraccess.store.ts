@@ -2,25 +2,14 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useApi } from '../composables/useApi'
 
-export interface RadiusArea {
-  type: 'radius'
-  center: { x: number; y: number }
-  radius: number
-}
-
-export interface ZoneArea {
-  type: 'zone'
-  points: Array<{ x: number; y: number }>
-}
-
-export type AreaRestriction = RadiusArea | ZoneArea
+export type Zone = Array<{ x: number; y: number }>
 
 export interface PlayerAccessEntry {
   id: number
   identifier: string
   name: string
   groups: string[]
-  area: AreaRestriction | null
+  zones: Zone[]
   maxExpiry: number | null  // forced expiry duration in seconds, null = no limit
 }
 

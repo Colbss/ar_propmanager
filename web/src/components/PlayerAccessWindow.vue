@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import { usePlayerAccessStore, type PlayerAccessEntry, type AreaRestriction, type RadiusArea } from '../stores/playeraccess.store'
+import { usePlayerAccessStore, type PlayerAccessEntry, type Zone, type OnlinePlayer } from '../stores/playeraccess.store'
 import MapZonePicker from './MapZonePicker.vue'
 import MapAreaViewer from './MapAreaViewer.vue'
-import MapRadiusPicker from './MapRadiusPicker.vue'
 
 const props = defineProps<{ level: number }>()
 
@@ -40,10 +39,8 @@ const emptyForm = () => ({
   name: '',
   identifier: '',
   groups: [] as string[],
-  hasArea: false,
-  areaType: 'radius' as 'radius' | 'zone',
-  radiusArea: null as RadiusArea | null,
-  zonePoints: [] as Array<{ x: number; y: number }>,
+  zones: [] as Zone[],
+  draftZone: [] as Array<{ x: number; y: number }>,
   maxExpiry: null as number | null,
 })
 
@@ -58,44 +55,28 @@ const openAdd = () => {
 }
 
 const openEdit = (entry: PlayerAccessEntry) => {
-  form.name = entry.name
+  form.name       = entry.name
   form.identifier = entry.identifier
-  form.groups = [...(entry.groups ?? [])]
-  form.hasArea = entry.area !== null
-
-  if (entry.area?.type === 'zone') {
-    form.areaType = 'zone'
-    form.zonePoints = [...entry.area.points]
-    form.radiusArea = null
-  } else if (entry.area?.type === 'radius') {
-    form.areaType = 'radius'
-    form.radiusArea = { ...entry.area }
-    form.zonePoints = []
-  } else {
-    form.areaType = 'radius'
-    form.radiusArea = null
-    form.zonePoints = []
-  }
-
-  form.maxExpiry = entry.maxExpiry ?? null
+  form.groups     = [...(entry.groups ?? [])]
+  form.zones      = entry.zones.map((z) => [...z])
+  form.draftZone  = []
+  form.maxExpiry  = entry.maxExpiry ?? null
   editingId.value = entry.id
-  showForm.value = true
+  showForm.value  = true
 }
 
 const cancelForm = () => {
-  showForm.value = false
+  showForm.value  = false
   editingId.value = null
 }
 
-const buildArea = (): AreaRestriction | null => {
-  if (!form.hasArea) return null
-  if (form.areaType === 'zone') return { type: 'zone', points: [...form.zonePoints] }
-  return form.radiusArea?.type === 'radius' ? form.radiusArea : null
+const addDraftZone = () => {
+  if (form.draftZone.length < 3) return
+  form.zones.push([...form.draftZone])
+  form.draftZone = []
 }
 
 // ─── Online player picker ─────────────────────────────────────────────────────
-
-import type { OnlinePlayer } from '../stores/playeraccess.store'
 
 const playerSearch = ref('')
 
@@ -108,8 +89,8 @@ const filteredPlayers = computed(() => {
 })
 
 const selectPlayer = (p: OnlinePlayer) => {
-  form.name       = p.name
-  form.identifier = p.identifier
+  form.name          = p.name
+  form.identifier    = p.identifier
   playerSearch.value = ''
 }
 
@@ -133,11 +114,11 @@ const submitForm = () => {
   if (!form.name.trim() || !form.identifier.trim() || form.groups.length === 0) return
 
   const payload = {
-    name: form.name.trim(),
+    name:       form.name.trim(),
     identifier: form.identifier.trim(),
-    groups: [...form.groups],
-    area: buildArea(),
-    maxExpiry: form.maxExpiry,
+    groups:     [...form.groups],
+    zones:      form.zones,
+    maxExpiry:  form.maxExpiry,
   }
 
   if (editingId.value) {
@@ -162,20 +143,6 @@ const requestDelete = (id: number) => {
   } else {
     pendingDelete.value = id
   }
-}
-
-// ─── Area badge helpers ───────────────────────────────────────────────────────
-
-function areaLabel(area: AreaRestriction | null) {
-  if (!area) return 'No Area'
-  if (area.type === 'zone') return `⬡ ${area.points.length} pts`
-  return `◎ ${area.radius}m`
-}
-
-function areaTitle(area: AreaRestriction | null) {
-  if (!area) return ''
-  if (area.type === 'zone') return `Zone: ${area.points.length} vertices`
-  return `Center: ${area.center.x.toFixed(1)}, ${area.center.y.toFixed(1)} — Radius: ${area.radius}m`
 }
 </script>
 
@@ -212,13 +179,11 @@ function areaTitle(area: AreaRestriction | null) {
         <span class="text-xs text-amber-300">Props you place will expire after {{ formatExpiry(myEntry.maxExpiry) }}.</span>
       </div>
 
-      <!-- Area -->
+      <!-- Zones -->
       <div class="flex flex-col gap-1">
-        <span class="text-xs text-slate-500">Area Restriction</span>
-        <div v-if="!myEntry.area" class="text-xs text-slate-400">No area restriction — full map access.</div>
-        <template v-else>
-          <MapAreaViewer :area="myEntry.area" height="35vh" />
-        </template>
+        <span class="text-xs text-slate-500">Zone Restrictions</span>
+        <div v-if="!myEntry.zones.length" class="text-xs text-slate-400">No zone restriction — full map access.</div>
+        <MapAreaViewer v-else :zones="myEntry.zones" height="35vh" />
       </div>
     </div>
 
@@ -309,7 +274,6 @@ function areaTitle(area: AreaRestriction | null) {
               Groups
               <span v-if="form.groups.length" class="ml-1 text-slate-500">({{ form.groups.length }} selected)</span>
             </label>
-            <!-- Known groups -->
             <div class="flex flex-wrap gap-1">
               <button
                 v-for="g in store.availableGroups"
@@ -324,7 +288,6 @@ function areaTitle(area: AreaRestriction | null) {
                 {{ g }}
               </button>
             </div>
-            <!-- Custom groups not in the known list, shown as removable chips -->
             <div v-if="form.groups.some(g => !store.availableGroups.includes(g))" class="flex flex-wrap gap-1">
               <span
                 v-for="g in form.groups.filter(g => !store.availableGroups.includes(g))"
@@ -337,7 +300,6 @@ function areaTitle(area: AreaRestriction | null) {
                 </button>
               </span>
             </div>
-            <!-- Add new group input -->
             <div class="flex gap-1">
               <input
                 v-model="customGroup"
@@ -358,55 +320,32 @@ function areaTitle(area: AreaRestriction | null) {
           </div>
         </div>
 
-        <!-- Area restriction -->
-        <label class="mb-1 block text-xs text-slate-400">Area Restriction</label>
-        <Transition name="form-slide">
-          <div class="rounded border border-white/10 bg-white/5 p-3">
-            <!-- Area type selector (None / Radius / Zone) -->
-            <div class="flex gap-1.5" :class="form.hasArea ? 'mb-3' : ''">
-              <button
-                class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
-                :class="!form.hasArea
-                  ? 'bg-white/15 text-slate-200'
-                  : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
-                @click="form.hasArea = false"
-              >
-                <i class="pi pi-ban text-[0.7rem]" />
-                None
-              </button>
-              <button
-                class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
-                :class="form.hasArea && form.areaType === 'radius'
-                  ? 'bg-blue-600/50 text-blue-200'
-                  : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
-                @click="form.hasArea = true; form.areaType = 'radius'"
-              >
-                <i class="pi pi-circle text-[0.7rem]" />
-                Radius
-              </button>
-              <button
-                class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
-                :class="form.hasArea && form.areaType === 'zone'
-                  ? 'bg-blue-600/50 text-blue-200'
-                  : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
-                @click="form.hasArea = true; form.areaType = 'zone'"
-              >
-                <i class="pi pi-map text-[0.7rem]" />
-                Zone
-              </button>
-            </div>
-
-            <!-- Radius picker -->
-            <template v-if="form.hasArea && form.areaType === 'radius'">
-              <MapRadiusPicker v-model="form.radiusArea" />
-            </template>
-
-            <!-- Zone inputs -->
-            <template v-else-if="form.hasArea && form.areaType === 'zone'">
-              <MapZonePicker v-model="form.zonePoints" />
-            </template>
-          </div>
-        </Transition>
+        <!-- Zone restrictions -->
+        <div class="mb-1 flex items-center justify-between">
+          <label class="text-xs text-slate-400">Zone Restrictions</label>
+          <span v-if="form.zones.length" class="text-[0.7rem] text-slate-500">
+            {{ form.zones.length }} zone{{ form.zones.length !== 1 ? 's' : '' }} saved
+          </span>
+        </div>
+        <div class="rounded border border-white/10 bg-white/5 p-3">
+          <MapZonePicker
+            v-model="form.draftZone"
+            :zones="form.zones"
+            @delete-zone="form.zones.splice($event, 1)"
+          />
+          <button
+            type="button"
+            class="mt-2 w-full rounded bg-blue-600/40 py-1 text-xs text-blue-300 transition hover:bg-blue-600/60 disabled:opacity-40"
+            :disabled="form.draftZone.length < 3"
+            @click.stop="addDraftZone"
+          >
+            <i class="pi pi-plus mr-1 text-[0.7rem]" />
+            Add Zone
+          </button>
+          <p class="mt-1.5 text-[0.7rem] text-slate-500">
+            {{ form.zones.length ? `Player is restricted to ${form.zones.length} zone${form.zones.length !== 1 ? 's' : ''}.` : 'No zones added — player has access to the full map.' }}
+          </p>
+        </div>
 
         <!-- Forced expiry -->
         <div class="mt-3">
@@ -472,13 +411,12 @@ function areaTitle(area: AreaRestriction | null) {
           {{ entry.groups.length }} group{{ entry.groups.length !== 1 ? 's' : '' }}
         </span>
 
-        <!-- Area badge -->
+        <!-- Zone count badge -->
         <span
           class="shrink-0 rounded px-2 py-0.5 text-xs"
-          :class="entry.area ? 'bg-blue-500/15 text-blue-400' : 'bg-white/5 text-slate-500'"
-          :title="areaTitle(entry.area)"
+          :class="entry.zones.length ? 'bg-blue-500/15 text-blue-400' : 'bg-white/5 text-slate-500'"
         >
-          {{ areaLabel(entry.area) }}
+          {{ entry.zones.length ? `${entry.zones.length} zone${entry.zones.length !== 1 ? 's' : ''}` : 'Full Map' }}
         </span>
 
         <!-- Expiry badge -->

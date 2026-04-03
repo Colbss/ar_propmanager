@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted, nextTick } from 'vue'
-import type { AreaRestriction } from '../stores/playeraccess.store'
-import type { Map as LeafletMap, Polygon, CircleMarker } from 'leaflet'
+import type { Zone } from '../stores/playeraccess.store'
+import type { Map as LeafletMap, Polygon } from 'leaflet'
 
 const props = defineProps<{
-  area: AreaRestriction | null
+  zones: Zone[]
   height?: string
 }>()
 
@@ -20,20 +20,12 @@ function gameToMap(x: number, y: number): [number, number] {
   ]
 }
 
-function circlePolygon(cx: number, cy: number, r: number, n = 80): [number, number][] {
-  return Array.from({ length: n }, (_, i) => {
-    const a = (2 * Math.PI * i) / n
-    return gameToMap(cx + r * Math.cos(a), cy + r * Math.sin(a))
-  })
-}
-
 // ─── State ────────────────────────────────────────────────────────────────────
 
 const mapContainer = ref<HTMLElement | null>(null)
 let L: typeof import('leaflet') | null = null
 let map: LeafletMap | null = null
-let shape: Polygon | null = null
-let centerMarker: CircleMarker | null = null
+let shapes: Polygon[] = []
 
 const TILE_URL = 'https://s.rsg.sc/sc/images/games/GTAV/map/game/{z}/{x}/{y}.jpg'
 
@@ -79,41 +71,29 @@ async function initMap() {
 function redraw() {
   if (!L || !map) return
 
-  if (shape) { shape.remove(); shape = null }
-  if (centerMarker) { centerMarker.remove(); centerMarker = null }
+  shapes.forEach((s) => s.remove())
+  shapes = []
 
-  const area = props.area
-  if (!area) return
+  if (!props.zones.length) return
 
-  if (area.type === 'radius') {
-    const pts = circlePolygon(area.center.x, area.center.y, area.radius)
-    shape = L.polygon(pts, {
+  let combinedBounds: ReturnType<typeof L.latLngBounds> | null = null
+
+  for (const zone of props.zones) {
+    if (zone.length < 2) continue
+    const latlngs = zone.map((p) => gameToMap(p.x, p.y))
+    const poly = L.polygon(latlngs as [number, number][], {
       color: '#3b82f6',
       fillColor: '#3b82f6',
-      fillOpacity: 0.18,
+      fillOpacity: zone.length >= 3 ? 0.18 : 0,
       weight: 2,
     }).addTo(map)
-
-    centerMarker = L.circleMarker(gameToMap(area.center.x, area.center.y), {
-      radius: 5,
-      color: '#60a5fa',
-      fillColor: '#93c5fd',
-      fillOpacity: 1,
-      weight: 2,
-    }).addTo(map)
-
-    map.fitBounds(shape.getBounds(), { padding: [24, 24] })
-  } else if (area.type === 'zone' && area.points.length >= 2) {
-    const latlngs = area.points.map((p) => gameToMap(p.x, p.y))
-    shape = L.polygon(latlngs as [number, number][], {
-      color: '#3b82f6',
-      fillColor: '#3b82f6',
-      fillOpacity: area.points.length >= 3 ? 0.18 : 0,
-      weight: 2,
-    }).addTo(map)
-
-    map.fitBounds(shape.getBounds(), { padding: [24, 24] })
+    shapes.push(poly)
+    combinedBounds = combinedBounds
+      ? combinedBounds.extend(poly.getBounds())
+      : poly.getBounds()
   }
+
+  if (combinedBounds) map.fitBounds(combinedBounds, { padding: [24, 24] })
 }
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
@@ -124,7 +104,7 @@ watch(
   { immediate: true },
 )
 
-watch(() => props.area, redraw, { deep: true })
+watch(() => props.zones, redraw, { deep: true })
 
 onUnmounted(() => {
   map?.remove()

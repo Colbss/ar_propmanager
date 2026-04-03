@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted, nextTick } from 'vue'
 import type { Map as LeafletMap, CircleMarker, Polygon } from 'leaflet'
+import type { Zone } from '../stores/playeraccess.store'
 
 // ─── Props / emits ────────────────────────────────────────────────────────────
 
 const props = defineProps<{
   modelValue: Array<{ x: number; y: number }>
+  zones?: Zone[]
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [points: Array<{ x: number; y: number }>]
+  'delete-zone': [index: number]
 }>()
 
 // ─── GTA V ↔ Leaflet coordinate conversion ───────────────────────────────────
@@ -40,7 +43,8 @@ const hoverCoords  = ref<{ x: number; y: number } | null>(null)
 let L: typeof import('leaflet') | null = null
 let map: LeafletMap | null = null
 let markers: CircleMarker[] = []
-let polygon: Polygon | null = null
+let draftPolygon: Polygon | null = null
+let savedPolygons: Polygon[] = []
 
 // Internal copy — synced to modelValue on mount, then emitted on every change
 const points = ref<Array<{ x: number; y: number }>>([...props.modelValue])
@@ -89,18 +93,18 @@ async function initMap() {
   map.on('mousemove', onMapMouseMove)
   map.on('mouseout', () => { hoverCoords.value = null })
 
-  redraw()
+  redrawSaved()
+  redrawDraft()
 
-  // If a zone is already defined, zoom to fit it
-  if (polygon && points.value.length >= 2) {
-    map.fitBounds(polygon.getBounds(), { padding: [24, 24] })
+  if (draftPolygon && points.value.length >= 2) {
+    map.fitBounds(draftPolygon.getBounds(), { padding: [24, 24] })
   }
 }
 
 function onMapClick(e: import('leaflet').LeafletMouseEvent) {
   if (!L) return
   points.value.push(mapToGame(e.latlng.lat, e.latlng.lng))
-  redraw()
+  redrawDraft()
   commitPoints()
 }
 
@@ -110,17 +114,17 @@ function onMapMouseMove(e: import('leaflet').LeafletMouseEvent) {
 
 // ─── Drawing ──────────────────────────────────────────────────────────────────
 
-function redraw() {
+function redrawDraft() {
   if (!L || !map) return
 
   markers.forEach((m) => m.remove())
   markers = []
-  if (polygon) { polygon.remove(); polygon = null }
+  if (draftPolygon) { draftPolygon.remove(); draftPolygon = null }
 
   const latlngs = points.value.map((p) => gameToMap(p.x, p.y))
 
   if (latlngs.length >= 2) {
-    polygon = L.polygon(latlngs as [number, number][], {
+    draftPolygon = L.polygon(latlngs as [number, number][], {
       color: '#3b82f6',
       fillColor: '#3b82f6',
       fillOpacity: latlngs.length >= 3 ? 0.15 : 0,
@@ -142,11 +146,38 @@ function redraw() {
       L!.DomEvent.stopPropagation(e)
       if (isFirst && points.value.length >= 3) return
       points.value.splice(i, 1)
-      redraw()
+      redrawDraft()
       commitPoints()
     })
 
     markers.push(marker)
+  })
+}
+
+function redrawSaved() {
+  savedPolygons.forEach((p) => p.remove())
+  savedPolygons = []
+
+  if (!L || !map || !props.zones?.length) return
+
+  props.zones.forEach((zone, i) => {
+    if (zone.length < 2) return
+    const latlngs = zone.map((p) => gameToMap(p.x, p.y))
+    const poly = L!.polygon(latlngs as [number, number][], {
+      color: '#10b981',
+      fillColor: '#10b981',
+      fillOpacity: zone.length >= 3 ? 0.15 : 0,
+      weight: 2,
+    }).addTo(map!)
+
+    poly.on('mouseover', () => poly.setStyle({ color: '#ef4444', fillColor: '#ef4444' }))
+    poly.on('mouseout',  () => poly.setStyle({ color: '#10b981', fillColor: '#10b981' }))
+    poly.on('click', (e: import('leaflet').LeafletMouseEvent) => {
+      L!.DomEvent.stopPropagation(e)
+      emit('delete-zone', i)
+    })
+
+    savedPolygons.push(poly)
   })
 }
 
@@ -155,13 +186,13 @@ function redraw() {
 const undoLast = () => {
   if (points.value.length === 0) return
   points.value.pop()
-  redraw()
+  redrawDraft()
   commitPoints()
 }
 
 const clearAll = () => {
   points.value = []
-  redraw()
+  redrawDraft()
   commitPoints()
 }
 
@@ -172,6 +203,19 @@ watch(
   (el) => { if (el) nextTick(initMap) },
   { immediate: true }
 )
+
+// Sync internal points when parent clears the draft (e.g. after "Add Zone")
+watch(
+  () => props.modelValue,
+  (val) => {
+    if (val.length === 0 && points.value.length > 0) {
+      points.value = []
+      redrawDraft()
+    }
+  }
+)
+
+watch(() => props.zones, redrawSaved, { deep: true })
 
 onUnmounted(() => {
   map?.remove()
@@ -188,7 +232,7 @@ onUnmounted(() => {
           X {{ hoverCoords.x.toFixed(0) }}&nbsp;&nbsp;Y {{ hoverCoords.y.toFixed(0) }}
         </template>
         <template v-else>
-          Click map to place vertices
+          Click map to place vertices · Hover a saved zone to remove it
         </template>
       </span>
     </div>
