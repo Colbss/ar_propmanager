@@ -44,9 +44,9 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
 </script>
 
 <template>
-  <div class="flex flex-col" @mousedown="cancelDelete">
+  <div class="flex h-[50vh] flex-col" @mousedown="cancelDelete">
     <!-- Prop list -->
-    <div class="max-h-[45vh] overflow-y-auto">
+    <div class="min-h-0 flex-1 overflow-y-auto">
       <div v-if="store.groups.size === 0" class="py-8 text-center text-xs text-slate-500">
         No props found.
       </div>
@@ -189,7 +189,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
     </div>
 
     <!-- Footer: total count -->
-    <div class="border-t border-white/5 px-4 py-1.5 text-[0.7rem] text-slate-600">
+    <div class="flex h-[3vh] shrink-0 items-center border-t border-white/5 px-4 text-[0.7rem] text-slate-600">
       {{ store.props.length }} prop{{ store.props.length !== 1 ? 's' : '' }} across {{ store.groups.size }} group{{ store.groups.size !== 1 ? 's' : '' }}
     </div>
   </div>

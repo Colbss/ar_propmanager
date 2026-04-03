@@ -174,7 +174,8 @@ const place = async () => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 p-4">
+  <div class="flex h-[50vh] flex-col">
+  <div class="flex flex-1 flex-col gap-4 p-4">
 
     <!-- Model search -->
     <div class="flex flex-col gap-1.5">
@@ -298,24 +299,25 @@ const place = async () => {
 
     <!-- Error -->
     <p v-if="error" class="text-xs text-red-400">{{ error }}</p>
+  </div>
 
-    <!-- Actions -->
-    <div class="flex justify-end gap-2 border-t border-white/5 pt-2">
-      <button
-        class="rounded bg-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/20"
-        @click="emit('done')"
-      >
-        Cancel
-      </button>
-      <button
-        class="flex items-center gap-1.5 rounded bg-blue-600/80 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-500/80 disabled:opacity-40"
-        :disabled="!canPlace || placing"
-        @click="place"
-      >
-        <i class="pi pi-map-marker text-[0.7rem]" />
-        {{ placing ? 'Placing…' : 'Place Prop' }}
-      </button>
-    </div>
+  <!-- Footer: actions -->
+  <div class="flex h-[5vh] shrink-0 items-center justify-end gap-2 border-t border-white/5 px-4">
+    <button
+      class="rounded bg-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/20"
+      @click="emit('done')"
+    >
+      Cancel
+    </button>
+    <button
+      class="flex items-center gap-1.5 rounded bg-blue-600/80 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-500/80 disabled:opacity-40"
+      :disabled="!canPlace || placing"
+      @click="place"
+    >
+      <i class="pi pi-map-marker text-[0.7rem]" />
+      {{ placing ? 'Placing…' : 'Place Prop' }}
+    </button>
+  </div>
   </div>
 </template>
 

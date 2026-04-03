@@ -229,7 +229,7 @@ const deleteFromCluster = (prop: PropEntry) => {
 </script>
 
 <template>
-  <div class="flex flex-col">
+  <div class="flex h-[50vh] flex-col">
     <!-- Toolbar -->
     <div class="flex items-center justify-between border-b border-white/10 px-4 py-2">
       <!-- Mode toggle -->
@@ -275,14 +275,14 @@ const deleteFromCluster = (prop: PropEntry) => {
     </div>
 
     <!-- Map -->
-    <div ref="mapContainer" class="h-[43vh] w-full" />
+    <div ref="mapContainer" class="flex-1 w-full" />
 
-    <!-- Selection panel -->
-    <div class="border-t border-white/10">
+    <!-- Selection panel (above footer, only when something is selected) -->
+    <div v-if="(selected || selectedCluster.length > 0) && mode === 'clusters'" class="border-t border-white/10">
 
       <!-- Cluster header (only shown when multiple props selected) -->
       <div
-        v-if="selectedCluster.length > 0 && mode === 'clusters'"
+        v-if="selectedCluster.length > 0"
         class="flex items-center justify-between border-b border-white/5 px-4 py-1.5"
       >
         <span class="text-xs text-slate-400">{{ selectedCluster.length }} props at this location</span>
@@ -290,10 +290,7 @@ const deleteFromCluster = (prop: PropEntry) => {
       </div>
 
       <!-- Prop rows — single selected prop or cluster list, same layout -->
-      <div
-        v-if="(selected || selectedCluster.length > 0) && mode === 'clusters'"
-        class="max-h-[15vh] overflow-y-auto"
-      >
+      <div class="max-h-[15vh] overflow-y-auto">
         <div
           v-for="prop in selected ? [selected] : selectedCluster"
           :key="prop.id"
@@ -314,13 +311,13 @@ const deleteFromCluster = (prop: PropEntry) => {
           </button>
         </div>
       </div>
+    </div>
 
-      <!-- Empty hint -->
-      <div v-else class="flex h-[38px] items-center px-4">
-        <span class="text-xs text-slate-600">
-          {{ mode === 'clusters' ? 'Click a marker or cluster to select' : 'Heatmap — density of placed props' }}
-        </span>
-      </div>
+    <!-- Footer: hint -->
+    <div class="flex h-[3vh] shrink-0 items-center border-t border-white/10 px-4">
+      <span class="text-xs text-slate-600">
+        {{ mode === 'clusters' ? 'Click a marker or cluster to select' : 'Heatmap — density of placed props' }}
+      </span>
     </div>
   </div>
 </template>

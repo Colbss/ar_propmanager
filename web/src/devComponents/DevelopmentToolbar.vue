@@ -94,7 +94,7 @@ function buildMockProps() {
   return Array.from({ length: 12 }, (_, i) => ({
     id: i + 1,
     model: mockModels[i % mockModels.length],
-    position: { x: +(100 + i * 30).toFixed(1), y: +(200 + i * 1.2).toFixed(1), z: +(28 + (i % 4) * 0.5).toFixed(1) },
+    position: { x: +(100 + i * 5).toFixed(1), y: +(200 + i * 1.2).toFixed(1), z: +(28 + (i % 4) * 0.5).toFixed(1) },
     quaternion: { x: 0, y: 0, z: 0, w: 1 },
     group: mockGroups[i % mockGroups.length],
     outlined: false,

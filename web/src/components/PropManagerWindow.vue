@@ -56,7 +56,7 @@ const visibleTabs = computed(() =>
     <div
       ref="windowEl"
       :style="style"
-      class="fixed z-20 flex w-[clamp(440px,35vw,620px)] flex-col overflow-hidden rounded-xl border border-white/10 bg-black/85 text-white shadow-2xl"
+      class="fixed z-20 flex max-h-[85vh] w-[clamp(440px,35vw,620px)] flex-col overflow-hidden rounded-xl border border-white/10 bg-black/85 text-white shadow-2xl"
     >
       <!-- Title bar -->
       <div
@@ -92,7 +92,7 @@ const visibleTabs = computed(() =>
       </div>
 
       <!-- Tab content -->
-      <div class="flex min-h-[50vh] flex-col">
+      <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
         <PropListWindow
           v-if="activeTab === 'props'"
           :can-manage="level >= 2"
