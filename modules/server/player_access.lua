@@ -12,6 +12,12 @@ end
 RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
     if getPlayerLevel(source) < 3 then return end
 
+    local existing = MySQL.query.await(
+        'SELECT id FROM `ar_props_player_access` WHERE identifier = ? LIMIT 1',
+        { data.identifier }
+    )
+    if existing and #existing > 0 then return end
+
     local id = MySQL.insert.await(
         'INSERT INTO `ar_props_player_access` (identifier,name,groups,zones) VALUES (?,?,?,?)',
         { data.identifier, data.name, json.encode(data.groups or {}), json.encode(data.zones or {}) }

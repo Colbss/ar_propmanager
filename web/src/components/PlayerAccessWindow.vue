@@ -110,8 +110,14 @@ const addCustomGroup = () => {
   customGroup.value = ''
 }
 
+const isDuplicate = computed(() =>
+  !editingId.value &&
+  !!form.identifier.trim() &&
+  store.entries.some((e) => e.identifier === form.identifier.trim())
+)
+
 const submitForm = () => {
-  if (!form.name.trim() || !form.identifier.trim() || form.groups.length === 0) return
+  if (!form.name.trim() || !form.identifier.trim() || form.groups.length === 0 || isDuplicate.value) return
 
   const payload = {
     name:       form.name.trim(),
@@ -368,20 +374,26 @@ const requestDelete = (id: number) => {
         </div>
 
         <!-- Form actions -->
-        <div class="mt-3 flex justify-end gap-2">
-          <button
-            class="rounded bg-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/20"
-            @click="cancelForm"
-          >
-            Cancel
-          </button>
-          <button
-            class="rounded bg-blue-600/80 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-500/80 disabled:opacity-40"
-            :disabled="!form.name.trim() || !form.identifier.trim() || form.groups.length === 0"
-            @click="submitForm"
-          >
-            {{ editingId ? 'Save Changes' : 'Grant Access' }}
-          </button>
+        <div class="mt-3 flex flex-col gap-2">
+          <p v-if="isDuplicate" class="text-[0.7rem] text-red-400">
+            <i class="pi pi-exclamation-circle mr-1 text-[0.65rem]" />
+            This player already has an access entry. Edit their existing entry instead.
+          </p>
+          <div class="flex justify-end gap-2">
+            <button
+              class="rounded bg-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/20"
+              @click="cancelForm"
+            >
+              Cancel
+            </button>
+            <button
+              class="rounded bg-blue-600/80 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-500/80 disabled:opacity-40"
+              :disabled="!form.name.trim() || !form.identifier.trim() || form.groups.length === 0 || isDuplicate"
+              @click="submitForm"
+            >
+              {{ editingId ? 'Save Changes' : 'Grant Access' }}
+            </button>
+          </div>
         </div>
       </div>
     </Transition>
