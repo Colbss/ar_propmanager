@@ -6,7 +6,7 @@ import { useNuiEvent } from '../composables/useNuiEvent'
 import { useGizmoStore } from '../stores/gizmo.store'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-const pmStore = useGizmoStore()
+const gizmoStore = useGizmoStore()
 
 let renderer: THREE.WebGLRenderer | null = null
 let camera: THREE.PerspectiveCamera
@@ -63,20 +63,20 @@ function syncDisplay() {
   const pos = mesh.position
   const euler = new THREE.Euler().setFromQuaternion(mesh.quaternion, 'YZX')
   const toDeg = THREE.MathUtils.radToDeg
-  pmStore.updateDisplay(
+  gizmoStore.updateDisplay(
     { x: pos.x, y: -pos.z, z: pos.y },
     { x: toDeg(euler.x), y: toDeg(-euler.z), z: toDeg(euler.y) }
   )
 }
 
 function handleObjectChange() {
-  if (!pmStore.currentEntity || !mesh) return
+  if (!gizmoStore.currentEntity || !mesh) return
 
   const pos = mesh.position
   const quat = mesh.quaternion
 
-  pmStore.moveEntity(
-    pmStore.currentEntity,
+  gizmoStore.moveEntity(
+    gizmoStore.currentEntity,
     { x: pos.x, y: -pos.z, z: pos.y },
     { x: quat.x, y: -quat.z, z: quat.y, w: quat.w }
   )
@@ -96,36 +96,28 @@ useNuiEvent<{
     cancel: { key: string; description: string }
   }
   restrictRotationAxes?: boolean
-  attachingProp?: boolean
-  simpleOverlay?: boolean
 }>('setGizmoEntity', (entity) => {
   if (!mesh || !transformControls) return
 
-  pmStore.currentEntity = entity.handle
+  gizmoStore.currentEntity = entity.handle
 
   if (!entity.handle) {
-    pmStore.showOverlay = false
+    gizmoStore.showOverlay = false
     transformControls.detach()
     return
   }
 
   if (entity.keybinds) {
-    pmStore.keys = entity.keybinds
+    gizmoStore.keys = entity.keybinds
   }
-  pmStore.restrictRotationAxes = entity.restrictRotationAxes ?? false
-  pmStore.attachingProp = entity.attachingProp ?? false
-  pmStore.simpleOverlay = entity.simpleOverlay ?? false
-
-  if (entity.simpleOverlay) {
-    pmStore.spaceMode = 'local'
-  }
+  gizmoStore.restrictRotationAxes = entity.restrictRotationAxes ?? false
 
   mesh.position.set(entity.position.x, entity.position.z, -entity.position.y)
   mesh.quaternion.set(entity.quaternion.x, entity.quaternion.y, entity.quaternion.z, entity.quaternion.w)
   syncDisplay()
 
   transformControls.attach(mesh)
-  pmStore.showOverlay = true
+  gizmoStore.showOverlay = true
 })
 
 useNuiEvent<{
@@ -133,7 +125,7 @@ useNuiEvent<{
   position: { x: number; y: number; z: number }
   quaternion: { x: number; y: number; z: number; w: number }
 }>('updateGizmoTransform', (data) => {
-  if (!mesh || !pmStore.currentEntity || pmStore.currentEntity !== data.handle) return
+  if (!mesh || !gizmoStore.currentEntity || gizmoStore.currentEntity !== data.handle) return
 
   mesh.position.set(data.position.x, data.position.z, -data.position.y)
   mesh.quaternion.set(data.quaternion.x, data.quaternion.y, data.quaternion.z, data.quaternion.w)
@@ -143,8 +135,8 @@ useNuiEvent<{
 useNuiEvent('closeGizmo', () => {
   if (!transformControls) return
   transformControls.detach()
-  pmStore.showOverlay = false
-  pmStore.currentEntity = null
+  gizmoStore.showOverlay = false
+  gizmoStore.currentEntity = null
 })
 
 useNuiEvent<{
@@ -175,7 +167,7 @@ useNuiEvent<{
 // Toggle edit mode from Lua keybind
 useNuiEvent('toggleMode', () => {
   if (!transformControls) return
-  pmStore.toggleEditorMode()
+  gizmoStore.toggleEditorMode()
 })
 
 // ─── Watchers ─────────────────────────────────────────────────────────────────
@@ -184,9 +176,9 @@ useNuiEvent('toggleMode', () => {
 // From syncDisplay: fivem.x=deg(e.x), fivem.y=deg(-e.z), fivem.z=deg(e.y)
 // So:               e.x=rad(fivem.x),  e.z=-rad(fivem.y), e.y=rad(fivem.z)
 watch(
-  () => pmStore.manualTransform,
+  () => gizmoStore.manualTransform,
   (transform) => {
-    if (!transform || !mesh || !pmStore.currentEntity) return
+    if (!transform || !mesh || !gizmoStore.currentEntity) return
 
     const { position: pos, rotation: rot } = transform
     mesh.position.set(pos.x, pos.z, -pos.y)
@@ -200,28 +192,28 @@ watch(
     const quat = new THREE.Quaternion().setFromEuler(euler)
     mesh.quaternion.copy(quat)
 
-    pmStore.moveEntity(
-      pmStore.currentEntity,
+    gizmoStore.moveEntity(
+      gizmoStore.currentEntity,
       { x: pos.x, y: pos.y, z: pos.z },
       { x: quat.x, y: -quat.z, z: quat.y, w: quat.w }
     )
     syncDisplay()
-    pmStore.manualTransform = null
+    gizmoStore.manualTransform = null
   }
 )
 
 watch(
-  () => pmStore.editorMode,
+  () => gizmoStore.editorMode,
   (mode) => transformControls?.setMode(mode)
 )
 
 watch(
-  () => pmStore.spaceMode,
+  () => gizmoStore.spaceMode,
   (space) => transformControls?.setSpace(space)
 )
 
 watch(
-  [() => pmStore.restrictRotationAxes, () => pmStore.editorMode],
+  [() => gizmoStore.restrictRotationAxes, () => gizmoStore.editorMode],
   ([restrict, mode]) => {
     if (!transformControls) return
     const hide = restrict && mode === 'rotate'

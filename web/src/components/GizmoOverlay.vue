@@ -160,10 +160,8 @@ async function pasteVec(target: Vec3Fields, fmt: (n: number) => string) {
 
         <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="pmStore.toggleSpaceMode()">Toggle Axis Space</button>
 
-        <template v-if="!pmStore.attachingProp">
-          <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="pmStore.snapToGround()">Snap To Ground</button>
-          <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="pmStore.resetRotation()">Reset Rotation</button>
-        </template>
+        <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="pmStore.snapToGround()">Snap To Ground</button>
+        <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="pmStore.resetRotation()">Reset Rotation</button>
 
         <div class="h-px bg-white/10" />
 

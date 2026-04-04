@@ -60,7 +60,6 @@ RegisterNUICallback('PlaceProp', function(data, cb)
         group          = data.group or 'default',
         renderDistance = data.renderDistance or 200,
         expiresAt      = data.expiresAt,
-        attachingProp  = true,
     })
 
     cb('ok')

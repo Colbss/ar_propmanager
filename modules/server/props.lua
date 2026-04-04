@@ -26,6 +26,10 @@ end)
 
 --- data: { id?, model, position, quaternion, group, renderDistance?, expiresAt? }
 RegisterNetEvent('ar_propmanager:saveProp', function(data)
+
+    print('Saving prop')
+    lib.print.info(data)
+
     local src  = source
     local pos  = data.position
     local quat = data.quaternion or { x = 0, y = 0, z = 0, w = 1 }

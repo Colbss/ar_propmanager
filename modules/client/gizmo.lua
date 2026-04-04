@@ -103,14 +103,18 @@ local hasFocus            = false
 --- Toggle NUI focus for the gizmo, optionally overriding the current state.
 --- @param override boolean|nil  Optional explicit focus state (true = focused, false = unfocused, nil = toggle)
 function ToggleFocus(override)
-    hasFocus = override or not hasFocus
+    if override ~= nil then
+        hasFocus = override
+    else
+        hasFocus = not hasFocus
+    end
     SetNuiFocus(hasFocus, hasFocus)
     SetNuiFocusKeepInput(hasFocus)
 end
 
 --- Open the gizmo for the given entity handle.
 --- @param entity  number  Entity handle
---- @param options table   Optional: { restrictRotationAxes, attachingProp, simpleOverlay, group, dbId, model }
+--- @param options table   Optional: { restrictRotationAxes, group, dbId, model }
 function OpenGizmo(entity, options)
     assert(DoesEntityExist(entity), 'ar_propmanager: entity does not exist')
     options = options or {}
@@ -138,8 +142,6 @@ function OpenGizmo(entity, options)
             quaternion           = { x = qx, y = qy, z = qz, w = qw },
             keybinds             = keybinds.GetKeybinds(),
             restrictRotationAxes = options.restrictRotationAxes or false,
-            attachingProp        = options.attachingProp or false,
-            simpleOverlay        = options.simpleOverlay or false,
         },
     })
 
@@ -224,17 +226,21 @@ end)
 RegisterNUICallback('SnapToGround', function(_, cb)
     if not currentGizmoEntity or not DoesEntityExist(currentGizmoEntity) then cb('error') return end
 
-    local pos             = GetEntityCoords(currentGizmoEntity)
-    local found, groundZ  = GetGroundZFor_3dCoord(pos.x, pos.y, pos.z + 1.0, false)
+    local pos            = GetEntityCoords(currentGizmoEntity)
+    local found, groundZ = GetGroundZFor_3dCoord(pos.x, pos.y, pos.z, false)
 
-    if found then
-        SetEntityCoords(currentGizmoEntity, pos.x, pos.y, groundZ, false, false, false, false)
+    if not found or (pos.z - groundZ) > 50.0 then cb('error') return end
+
+    local placed = PlaceObjectOnGroundProperly(currentGizmoEntity)
+
+    if placed then
+        local newPos = GetEntityCoords(currentGizmoEntity)
         local qx, qy, qz, qw = GetEntityQuaternion(currentGizmoEntity)
         SendNUIMessage({
             action = 'updateGizmoTransform',
             data   = {
                 handle     = currentGizmoEntity,
-                position   = { x = pos.x, y = pos.y, z = groundZ },
+                position   = { x = newPos.x, y = newPos.y, z = newPos.z },
                 quaternion = { x = qx, y = qy, z = qz, w = qw },
             },
         })

@@ -29,8 +29,6 @@ export const useGizmoStore = defineStore('gizmo', () => {
     finish: { key: 'E',    description: 'Finish' },
     cancel: { key: 'Back', description: 'Cancel' },
   })
-  const attachingProp = ref<boolean>(false)
-  const simpleOverlay = ref<boolean>(false)
   const restrictRotationAxes = ref<boolean>(false)
   const displayPosition = ref<{ x: number; y: number; z: number }>({ x: 0, y: 0, z: 0 })
   const displayRotation = ref<{ x: number; y: number; z: number }>({ x: 0, y: 0, z: 0 })
@@ -95,8 +93,6 @@ export const useGizmoStore = defineStore('gizmo', () => {
     spaceMode,
     currentEntity,
     keys,
-    attachingProp,
-    simpleOverlay,
     restrictRotationAxes,
     displayPosition,
     displayRotation,

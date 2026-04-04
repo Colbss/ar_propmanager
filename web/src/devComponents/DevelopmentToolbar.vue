@@ -32,8 +32,6 @@ const testGizmo = () => {
           finish: { key: 'E',    description: 'Finish' },
           cancel: { key: 'Back', description: 'Cancel' },
         },
-        attachingProp: false,
-        simpleOverlay: false,
         restrictRotationAxes: false
       }
     })
