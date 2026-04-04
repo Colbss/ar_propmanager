@@ -1,4 +1,5 @@
 local config = require 'config'
+lib.locale()
 
 -- ─── Group toggle ─────────────────────────────────────────────────────────────
 
@@ -18,8 +19,13 @@ end
 
 --- data: { group = string, enabled = bool }
 RegisterNetEvent('ar_propmanager:toggleGroup', function(data)
-    if getPlayerLevel(source) < 1 then return end
+    local src = source
+    if getPlayerLevel(src) < 1 then return end
     setGroupEnabled(data.group, data.enabled)
+    CreateLog(src, locale('logs_toggle_group_title'), locale('logs_toggle_group_description'), {
+        group   = data.group,
+        enabled = data.enabled,
+    })
 end)
 
 -- ─── Prop events ─────────────────────────────────────────────────────────────
@@ -56,6 +62,17 @@ RegisterNetEvent('ar_propmanager:saveProp', function(data)
             { pos.x, pos.y, pos.z, quat.x, quat.y, quat.z, quat.w, propData.renderDistance, propData.expiresAt, data.id }
         )
         broadcastPropUpdated(data.id, propData, data.group)
+        CreateLog(src, locale('logs_update_prop_title'), locale('logs_update_prop_description'), {
+            id     = data.id,
+            model  = propData.model,
+            coords = {
+                x = tonumber(string.format('%.2f', pos.x)),
+                y = tonumber(string.format('%.2f', pos.y)),
+                z = tonumber(string.format('%.2f', pos.z)),
+            },
+            group      = data.group,
+            expires_at = propData.expiresAt,
+        })
     else
         -- ── New prop ──────────────────────────────────────────────────────────
         local group = getOrCreateGroup(data.group)
@@ -78,6 +95,20 @@ RegisterNetEvent('ar_propmanager:saveProp', function(data)
         )
         group.props[id] = propData
         broadcastPropAdded(id, propData, data.group)
+
+        CreateLog(src, locale('logs_new_prop_title'), locale('logs_new_prop_description'), {
+            id = id,
+            model = data.model,
+            coords = {
+                x = tonumber(string.format("%.2f", pos.x)),
+                y = tonumber(string.format("%.2f", pos.y)),
+                z = tonumber(string.format("%.2f", pos.z))
+            },
+            group = data.group,
+            render_distance = propData.renderDistance,
+            expires_at = propData.expiresAt,
+        })
+
     end
 end)
 
@@ -114,6 +145,12 @@ RegisterNetEvent('ar_propmanager:deleteProp', function(data)
 
     MySQL.query('DELETE FROM `ar_props` WHERE id = ?', { data.id })
     broadcastPropsRemoved({ data.id })
+
+    CreateLog(src, locale('logs_delete_prop_title'), locale('logs_delete_prop_description'), {
+        id    = data.id,
+        model = propData.model,
+        group = targetGroupName,
+    })
 end)
 
 -- ─── Expiry cron ─────────────────────────────────────────────────────────────
@@ -137,6 +174,11 @@ local function checkExpiredProps()
         pruneGroupIfEmpty(entry.groupName)
         print(('[ar_propmanager] Expired prop removed — id: %s, model: %s, group: %s')
             :format(entry.dbId, entry.prop.model, entry.groupName))
+        CreateLog(0, locale('logs_expire_prop_title'), locale('logs_expire_prop_description'), {
+            id    = entry.dbId,
+            model = entry.prop.model,
+            group = entry.groupName,
+        })
     end
 
     local ids = {}

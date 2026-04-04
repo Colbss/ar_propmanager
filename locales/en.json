@@ -2,6 +2,22 @@
     "keybind_mode": "Change Mode",
     "keybind_focus": "Toggle Focus",
     "keybind_finish": "Finish",
-    "keybind_cancel": "Cancel"
+    "keybind_cancel": "Cancel",
 
+    "logs_new_prop_title": "Prop Placed",
+    "logs_new_prop_description": "A new prop was placed",
+    "logs_update_prop_title": "Prop Updated",
+    "logs_update_prop_description": "A prop's position was updated",
+    "logs_delete_prop_title": "Prop Deleted",
+    "logs_delete_prop_description": "A prop was deleted",
+    "logs_expire_prop_title": "Prop Expired",
+    "logs_expire_prop_description": "A prop was automatically removed after expiry",
+    "logs_toggle_group_title": "Group Toggled",
+    "logs_toggle_group_description": "A prop group's visibility was toggled",
+    "logs_add_player_access_title": "Player Access Added",
+    "logs_add_player_access_description": "A player was granted prop manager access",
+    "logs_update_player_access_title": "Player Access Updated",
+    "logs_update_player_access_description": "A player's prop manager access was updated",
+    "logs_delete_player_access_title": "Player Access Removed",
+    "logs_delete_player_access_description": "A player's prop manager access was removed"
 }

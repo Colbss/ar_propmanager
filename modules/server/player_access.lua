@@ -1,3 +1,5 @@
+lib.locale()
+
 -- ─── Player access events ─────────────────────────────────────────────────────
 
 --- Decodes the zones JSON column into a Lua table (array of zone point arrays).
@@ -10,7 +12,8 @@ end
 
 --- data: { identifier, name, groups, zones? }
 RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
-    if getPlayerLevel(source) < 3 then return end
+    local src = source
+    if getPlayerLevel(src) < 3 then return end
 
     local existing = MySQL.query.await(
         'SELECT id FROM `ar_props_player_access` WHERE identifier = ? LIMIT 1',
@@ -24,28 +27,52 @@ RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
     )
 
     -- Return confirmed record so UI can swap the optimistic temp id
-    TriggerClientEvent('ar_propmanager:playerAccessSaved', source, {
+    TriggerClientEvent('ar_propmanager:playerAccessSaved', src, {
         id         = id,
         identifier = data.identifier,
         name       = data.name,
         groups     = data.groups or {},
         zones      = data.zones or {},
     })
+
+    CreateLog(src, locale('logs_add_player_access_title'), locale('logs_add_player_access_description'), {
+        id         = id,
+        identifier = data.identifier,
+        name       = data.name,
+        groups     = data.groups or {},
+    })
 end)
 
 --- data: { id, identifier, name, groups, zones? }
 RegisterNetEvent('ar_propmanager:updatePlayerAccess', function(data)
-    if getPlayerLevel(source) < 3 then return end
+    local src = source
+    if getPlayerLevel(src) < 3 then return end
 
     MySQL.query(
         'UPDATE `ar_props_player_access` SET identifier=?,name=?,groups=?,zones=? WHERE id=?',
         { data.identifier, data.name, json.encode(data.groups or {}), json.encode(data.zones or {}), data.id }
     )
+
+    CreateLog(src, locale('logs_update_player_access_title'), locale('logs_update_player_access_description'), {
+        id         = data.id,
+        identifier = data.identifier,
+        name       = data.name,
+        groups     = data.groups or {},
+    })
 end)
 
 RegisterNetEvent('ar_propmanager:deletePlayerAccess', function(id)
-    if getPlayerLevel(source) < 3 then return end
+    local src = source
+    if getPlayerLevel(src) < 3 then return end
+
+    local row = MySQL.query.await('SELECT identifier, name FROM `ar_props_player_access` WHERE id = ? LIMIT 1', { id })
     MySQL.query('DELETE FROM `ar_props_player_access` WHERE id = ?', { id })
+
+    CreateLog(src, locale('logs_delete_player_access_title'), locale('logs_delete_player_access_description'), {
+        id         = id,
+        identifier = row and row[1] and row[1].identifier or 'unknown',
+        name       = row and row[1] and row[1].name       or 'unknown',
+    })
 end)
 
 -- ─── Server callbacks ─────────────────────────────────────────────────────────
