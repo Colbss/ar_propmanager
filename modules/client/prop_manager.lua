@@ -87,7 +87,7 @@ RegisterNUICallback('EditProp', function(data, cb)
         if not prop then cb('error') return end
 
         local pos = prop.position
-        if #vector3(pos.x, pos.y, pos.z) - GetEntityCoords(PlayerPedId()) > 50.0 then
+        if #(vector3(pos.x, pos.y, pos.z) - GetEntityCoords(PlayerPedId())) > 50.0 then
             cb('too_far')
             return
         end

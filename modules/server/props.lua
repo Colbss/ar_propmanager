@@ -81,6 +81,15 @@ RegisterNetEvent('ar_propmanager:saveProp', function(data)
     end
 end)
 
+--- Remove a group from memory and DB if it has no props remaining.
+local function pruneGroupIfEmpty(groupName)
+    local group = groups[groupName]
+    if not group then return end
+    if next(group.props) ~= nil then return end
+    groups[groupName] = nil
+    MySQL.query('DELETE FROM `ar_prop_groups` WHERE group_name = ?', { groupName })
+end
+
 --- data: { id }
 RegisterNetEvent('ar_propmanager:deleteProp', function(data)
     local src = source
@@ -101,6 +110,7 @@ RegisterNetEvent('ar_propmanager:deleteProp', function(data)
     end
 
     groups[targetGroupName].props[data.id] = nil
+    pruneGroupIfEmpty(targetGroupName)
 
     MySQL.query('DELETE FROM `ar_props` WHERE id = ?', { data.id })
     broadcastPropsRemoved({ data.id })
@@ -124,6 +134,7 @@ local function checkExpiredProps()
 
     for _, entry in ipairs(expired) do
         groups[entry.groupName].props[entry.dbId] = nil
+        pruneGroupIfEmpty(entry.groupName)
         print(('[ar_propmanager] Expired prop removed — id: %s, model: %s, group: %s')
             :format(entry.dbId, entry.prop.model, entry.groupName))
     end
