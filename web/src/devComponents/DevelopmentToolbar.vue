@@ -21,7 +21,7 @@ const testGizmo = () => {
       }
     })
     debugData({
-      action: 'setGizmoEntity',
+      action: 'initGizmo',
       data: {
         handle: 1,
         position: { x: 0, y: 0, z: 0 },
@@ -120,7 +120,6 @@ const items = [
       debugData({ action: 'closeGizmo', data: {} })
       debugData({ action: 'hide', data: {} })
       pmStore.isVisible = false
-      pmStore.showOverlay = false
     }
   },
   { label: 'Prop Manager — Level 0 (restricted · zone)',        command: () => testPropManager(0, mockRestrictedZone) },

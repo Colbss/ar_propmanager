@@ -91,17 +91,16 @@ end
 
 -- ─── Gizmo state ─────────────────────────────────────────────────────────────
 
-local gizmoActive         = false
-local currentGizmoEntity  = nil
-local currentGizmoOptions = nil
-local originalCoords      = nil
-local originalQuat        = nil
-local hasFocus            = false
+local gizmoActive        = false
+local currentGizmoEntity = nil
+local hasFocus           = false
+local gizmoOnFinish      = nil
+local gizmoOnCancel      = nil
 
 -- ─── Gizmo ────────────────────────────────────────────────────────────────────
 
 --- Toggle NUI focus for the gizmo, optionally overriding the current state.
---- @param override boolean|nil  Optional explicit focus state (true = focused, false = unfocused, nil = toggle)
+--- @param override boolean|nil  true = focused, false = unfocused, nil = toggle
 function ToggleFocus(override)
     if override ~= nil then
         hasFocus = override
@@ -112,20 +111,21 @@ function ToggleFocus(override)
     SetNuiFocusKeepInput(hasFocus)
 end
 
---- Open the gizmo for the given entity handle.
---- @param entity  number  Entity handle
---- @param options table   Optional: { restrictRotationAxes, group, dbId, model }
-function OpenGizmo(entity, options)
+--- Open the gizmo for the given entity.
+--- @param entity   number        Entity handle to manipulate
+--- @param options  table|nil     { restrictRotationAxes }
+--- @param onFinish function|nil  Called with (position, quaternion) when the player confirms
+--- @param onCancel function|nil  Called with no args when the player cancels
+function OpenGizmo(entity, options, onFinish, onCancel)
     assert(DoesEntityExist(entity), 'ar_propmanager: entity does not exist')
     options = options or {}
-    currentGizmoOptions = options
-    currentGizmoEntity  = entity
+
+    currentGizmoEntity = entity
+    gizmoOnFinish      = onFinish
+    gizmoOnCancel      = onCancel
 
     local pos             = GetEntityCoords(entity)
     local qx, qy, qz, qw = GetEntityQuaternion(entity)
-
-    originalCoords = pos
-    originalQuat   = { x = qx, y = qy, z = qz, w = qw }
 
     keybinds.mode:disable(false)
     keybinds.focus:disable(false)
@@ -133,11 +133,9 @@ function OpenGizmo(entity, options)
     keybinds.cancel:disable(false)
 
     ToggleFocus(false)
-    SendNUIMessage({ action = 'show', data = {} })
     SendNUIMessage({
-        action = 'setGizmoEntity',
+        action = 'initGizmo',
         data   = {
-            handle               = entity,
             position             = { x = pos.x, y = pos.y, z = pos.z },
             quaternion           = { x = qx, y = qy, z = qz, w = qw },
             keybinds             = keybinds.GetKeybinds(),
@@ -149,13 +147,11 @@ function OpenGizmo(entity, options)
 
     CreateThread(function()
         while gizmoActive do
-            -- Prevent camera rotation from mouse movement
             if hasFocus then
                 DisableControlAction(0, 1, true)   -- INPUT_LOOK_LR
                 DisableControlAction(0, 2, true)   -- INPUT_LOOK_UD
             end
 
-            -- Prevent combat actions
             DisablePlayerFiring(PlayerId(), true)
             DisableControlAction(0, 25, true)  -- Aim
             DisableControlAction(0, 140, true) -- MeleeAttackLight
@@ -180,7 +176,7 @@ function OpenGizmo(entity, options)
 end
 
 --- Close the active gizmo session.
---- @param save boolean  true = keep final transform, false = revert to original
+--- @param save boolean  true = confirm placement and fire onFinish, false = cancel and fire onCancel
 CloseGizmo = function(save)
     if not gizmoActive then return end
     gizmoActive = false
@@ -190,36 +186,51 @@ CloseGizmo = function(save)
     keybinds.finish:disable(true)
     keybinds.cancel:disable(true)
 
-    if not save and currentGizmoEntity and DoesEntityExist(currentGizmoEntity) then
-        DeleteEntity(currentGizmoEntity)
-    end
-
     ToggleFocus(false)
     SendNUIMessage({ action = 'closeGizmo', data = {} })
-    SendNUIMessage({ action = 'hide', data = {} })
 
-    currentGizmoEntity  = nil
-    currentGizmoOptions = nil
-    originalCoords      = nil
-    originalQuat        = nil
+    -- Capture and clear state before firing callbacks
+    local entity   = currentGizmoEntity
+    local onFinish = gizmoOnFinish
+    local onCancel = gizmoOnCancel
+
+    currentGizmoEntity = nil
+    gizmoOnFinish      = nil
+    gizmoOnCancel      = nil
+
+    if save then
+        if entity and DoesEntityExist(entity) then
+            local pos             = GetEntityCoords(entity)
+            local qx, qy, qz, qw = GetEntityQuaternion(entity)
+            if onFinish then
+                onFinish(
+                    { x = pos.x, y = pos.y, z = pos.z },
+                    { x = qx, y = qy, z = qz, w = qw }
+                )
+            end
+        end
+    else
+        if entity and DoesEntityExist(entity) then
+            DeleteEntity(entity)
+        end
+        if onCancel then onCancel() end
+    end
 end
 
 -- ─── Gizmo NUI callbacks ──────────────────────────────────────────────────────
 
 RegisterNUICallback('MoveEntity', function(data, cb)
-    local entity = data.handle
-    if not entity or not DoesEntityExist(entity) then cb('error') return end
+    if not currentGizmoEntity or not DoesEntityExist(currentGizmoEntity) then cb('error') return end
 
-    SetEntityCoords(entity, data.position.x, data.position.y, data.position.z, false, false, false, false)
+    SetEntityCoords(currentGizmoEntity, data.position.x, data.position.y, data.position.z, false, false, false, false)
 
     if data.quaternion then
-        SetEntityQuaternion(entity, data.quaternion.x, data.quaternion.y, data.quaternion.z, data.quaternion.w)
+        SetEntityQuaternion(currentGizmoEntity, data.quaternion.x, data.quaternion.y, data.quaternion.z, data.quaternion.w)
     elseif data.rotation then
-        SetEntityRotation(entity, data.rotation.x, data.rotation.y, data.rotation.z, 2, false)
+        SetEntityRotation(currentGizmoEntity, data.rotation.x, data.rotation.y, data.rotation.z, 2, false)
     end
 
-    FreezeEntityPosition(entity, true)
-
+    FreezeEntityPosition(currentGizmoEntity, true)
     cb('ok')
 end)
 
@@ -234,12 +245,11 @@ RegisterNUICallback('SnapToGround', function(_, cb)
     local placed = PlaceObjectOnGroundProperly(currentGizmoEntity)
 
     if placed then
-        local newPos = GetEntityCoords(currentGizmoEntity)
+        local newPos          = GetEntityCoords(currentGizmoEntity)
         local qx, qy, qz, qw = GetEntityQuaternion(currentGizmoEntity)
         SendNUIMessage({
             action = 'updateGizmoTransform',
             data   = {
-                handle     = currentGizmoEntity,
                 position   = { x = newPos.x, y = newPos.y, z = newPos.z },
                 quaternion = { x = qx, y = qy, z = qz, w = qw },
             },
@@ -258,7 +268,6 @@ RegisterNUICallback('ResetRotation', function(_, cb)
     SendNUIMessage({
         action = 'updateGizmoTransform',
         data   = {
-            handle     = currentGizmoEntity,
             position   = { x = pos.x, y = pos.y, z = pos.z },
             quaternion = { x = 0.0, y = 0.0, z = 0.0, w = 1.0 },
         },
@@ -268,27 +277,6 @@ RegisterNUICallback('ResetRotation', function(_, cb)
 end)
 
 RegisterNUICallback('Finish', function(_, cb)
-    if currentGizmoEntity and DoesEntityExist(currentGizmoEntity) then
-        local pos             = GetEntityCoords(currentGizmoEntity)
-        local qx, qy, qz, qw = GetEntityQuaternion(currentGizmoEntity)
-        local opts            = currentGizmoOptions or {}
-
-        TriggerServerEvent('ar_propmanager:saveProp', {
-            id             = opts.dbId,
-            model          = opts.model or tostring(GetEntityModel(currentGizmoEntity)),
-            position       = { x = pos.x, y = pos.y, z = pos.z },
-            quaternion     = { x = qx, y = qy, z = qz, w = qw },
-            group          = opts.group or 'default',
-            renderDistance = opts.renderDistance or 200,
-            expiresAt      = opts.expiresAt,
-        })
-
-        -- For new props, delete the temp entity — server broadcasts it back via propAdded
-        if not opts.dbId then
-            DeleteEntity(currentGizmoEntity)
-            currentGizmoEntity = nil
-        end
-    end
     CloseGizmo(true)
     cb('ok')
 end)
@@ -325,6 +313,6 @@ end, false)
 
 -- ─── Exports ─────────────────────────────────────────────────────────────────
 
-exports('OpenGizmo', function(entity, options)
-    OpenGizmo(entity, options)
+exports('OpenGizmo', function(entity, options, onFinish, onCancel)
+    OpenGizmo(entity, options, onFinish, onCancel)
 end)

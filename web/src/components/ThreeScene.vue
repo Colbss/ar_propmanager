@@ -70,13 +70,12 @@ function syncDisplay() {
 }
 
 function handleObjectChange() {
-  if (!gizmoStore.currentEntity || !mesh) return
+  if (!gizmoStore.isVisible || !mesh) return
 
   const pos = mesh.position
   const quat = mesh.quaternion
 
   gizmoStore.moveEntity(
-    gizmoStore.currentEntity,
     { x: pos.x, y: -pos.z, z: pos.y },
     { x: quat.x, y: -quat.z, z: quat.y, w: quat.w }
   )
@@ -86,30 +85,14 @@ function handleObjectChange() {
 // ─── NUI Events ───────────────────────────────────────────────────────────────
 
 useNuiEvent<{
-  handle: number
   position: { x: number; y: number; z: number }
   quaternion: { x: number; y: number; z: number; w: number }
-  keybinds?: {
-    mode:   { key: string; description: string }
-    focus:  { key: string; description: string }
-    finish: { key: string; description: string }
-    cancel: { key: string; description: string }
-  }
+  keybinds?: { mode: { key: string; description: string }; focus: { key: string; description: string }; finish: { key: string; description: string }; cancel: { key: string; description: string } }
   restrictRotationAxes?: boolean
-}>('setGizmoEntity', (entity) => {
+}>('initGizmo', (entity) => {
   if (!mesh || !transformControls) return
 
-  gizmoStore.currentEntity = entity.handle
-
-  if (!entity.handle) {
-    gizmoStore.showOverlay = false
-    transformControls.detach()
-    return
-  }
-
-  if (entity.keybinds) {
-    gizmoStore.keys = entity.keybinds
-  }
+  if (entity.keybinds) gizmoStore.keys = entity.keybinds
   gizmoStore.restrictRotationAxes = entity.restrictRotationAxes ?? false
 
   mesh.position.set(entity.position.x, entity.position.z, -entity.position.y)
@@ -117,15 +100,14 @@ useNuiEvent<{
   syncDisplay()
 
   transformControls.attach(mesh)
-  gizmoStore.showOverlay = true
+  gizmoStore.isVisible = true
 })
 
 useNuiEvent<{
-  handle: number
   position: { x: number; y: number; z: number }
   quaternion: { x: number; y: number; z: number; w: number }
 }>('updateGizmoTransform', (data) => {
-  if (!mesh || !gizmoStore.currentEntity || gizmoStore.currentEntity !== data.handle) return
+  if (!mesh || !gizmoStore.isVisible) return
 
   mesh.position.set(data.position.x, data.position.z, -data.position.y)
   mesh.quaternion.set(data.quaternion.x, data.quaternion.y, data.quaternion.z, data.quaternion.w)
@@ -135,8 +117,7 @@ useNuiEvent<{
 useNuiEvent('closeGizmo', () => {
   if (!transformControls) return
   transformControls.detach()
-  gizmoStore.showOverlay = false
-  gizmoStore.currentEntity = null
+  gizmoStore.isVisible = false
 })
 
 useNuiEvent<{
@@ -178,7 +159,7 @@ useNuiEvent('toggleMode', () => {
 watch(
   () => gizmoStore.manualTransform,
   (transform) => {
-    if (!transform || !mesh || !gizmoStore.currentEntity) return
+    if (!transform || !mesh || !gizmoStore.isVisible) return
 
     const { position: pos, rotation: rot } = transform
     mesh.position.set(pos.x, pos.z, -pos.y)
@@ -193,7 +174,6 @@ watch(
     mesh.quaternion.copy(quat)
 
     gizmoStore.moveEntity(
-      gizmoStore.currentEntity,
       { x: pos.x, y: pos.y, z: pos.z },
       { x: quat.x, y: -quat.z, z: quat.y, w: quat.w }
     )

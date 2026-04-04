@@ -54,13 +54,25 @@ RegisterNUICallback('PlaceProp', function(data, cb)
     FreezeEntityPosition(prop, true)
     SetEntityCollision(prop, false, false)
 
-    ClosePropManager()
-    OpenGizmo(prop, {
+    local propMeta = {
         model          = model,
         group          = data.group or 'default',
         renderDistance = data.renderDistance or 200,
         expiresAt      = data.expiresAt,
-    })
+    }
+
+    ClosePropManager()
+    OpenGizmo(prop, {}, function(position, quaternion)
+        TriggerServerEvent('ar_propmanager:saveProp', {
+            model          = propMeta.model,
+            position       = position,
+            quaternion     = quaternion,
+            group          = propMeta.group,
+            renderDistance = propMeta.renderDistance,
+            expiresAt      = propMeta.expiresAt,
+        })
+        if DoesEntityExist(prop) then DeleteEntity(prop) end
+    end)
 
     cb('ok')
 end)
@@ -84,14 +96,26 @@ RegisterNUICallback('EditProp', function(data, cb)
         local entity = spawnedProps[id]
         if not entity or not DoesEntityExist(entity) then cb('error') return end
 
-        ClosePropManager()
-        OpenGizmo(entity, {
+        local propMeta = {
             dbId           = id,
             model          = prop.model,
             group          = prop.group,
             renderDistance = prop.renderDistance or 200,
             expiresAt      = prop.expiresAt,
-        })
+        }
+
+        ClosePropManager()
+        OpenGizmo(entity, {}, function(position, quaternion)
+            TriggerServerEvent('ar_propmanager:saveProp', {
+                id             = propMeta.dbId,
+                model          = propMeta.model,
+                position       = position,
+                quaternion     = quaternion,
+                group          = propMeta.group,
+                renderDistance = propMeta.renderDistance,
+                expiresAt      = propMeta.expiresAt,
+            })
+        end)
 
         cb('ok')
     end, data.id)

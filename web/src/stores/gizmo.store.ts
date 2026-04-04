@@ -19,10 +19,8 @@ export interface GizmoKeys {
 
 export const useGizmoStore = defineStore('gizmo', () => {
   const isVisible = ref<boolean>(false)
-  const showOverlay = ref<boolean>(false)
   const editorMode = ref<EditorMode>('translate')
   const spaceMode = ref<SpaceMode>('world')
-  const currentEntity = ref<number | null>(null)
   const keys = ref<GizmoKeys>({
     mode:   { key: 'R',    description: 'Change Mode' },
     focus:  { key: 'F',    description: 'Toggle Focus' },
@@ -61,10 +59,10 @@ export const useGizmoStore = defineStore('gizmo', () => {
     spaceMode.value = spaceMode.value === 'world' ? 'local' : 'world'
   }
 
-  const moveEntity = (handle: number, position: object, quaternion: object) => {
+  const moveEntity = (position: object, quaternion: object) => {
     useApi(
       'MoveEntity',
-      { method: 'POST', body: JSON.stringify({ handle, position, quaternion }) },
+      { method: 'POST', body: JSON.stringify({ position, quaternion }) },
       undefined,
       {}
     )
@@ -88,10 +86,8 @@ export const useGizmoStore = defineStore('gizmo', () => {
 
   return {
     isVisible,
-    showOverlay,
     editorMode,
     spaceMode,
-    currentEntity,
     keys,
     restrictRotationAxes,
     displayPosition,
