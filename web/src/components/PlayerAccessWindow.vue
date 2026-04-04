@@ -96,18 +96,10 @@ const selectPlayer = (p: OnlinePlayer) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const customGroup = ref('')
-
 const toggleGroup = (g: string) => {
   const idx = form.groups.indexOf(g)
   if (idx === -1) form.groups.push(g)
   else form.groups.splice(idx, 1)
-}
-
-const addCustomGroup = () => {
-  const g = customGroup.value.trim()
-  if (g && !form.groups.includes(g)) form.groups.push(g)
-  customGroup.value = ''
 }
 
 const isDuplicate = computed(() =>
@@ -277,7 +269,7 @@ const requestDelete = (id: number) => {
           <!-- Groups -->
           <div class="flex flex-col gap-1">
             <label class="text-xs text-slate-400">
-              Groups
+              Default Groups
               <span v-if="form.groups.length" class="ml-1 text-slate-500">({{ form.groups.length }} selected)</span>
             </label>
             <div class="flex flex-wrap gap-1">
@@ -292,35 +284,6 @@ const requestDelete = (id: number) => {
                 @click.stop="toggleGroup(g)"
               >
                 {{ g }}
-              </button>
-            </div>
-            <div v-if="form.groups.some(g => !store.availableGroups.includes(g))" class="flex flex-wrap gap-1">
-              <span
-                v-for="g in form.groups.filter(g => !store.availableGroups.includes(g))"
-                :key="g"
-                class="flex items-center gap-1 rounded bg-violet-600/40 px-2 py-0.5 text-xs text-violet-200 ring-1 ring-violet-500/30"
-              >
-                {{ g }}
-                <button type="button" class="ml-0.5 opacity-60 hover:opacity-100" @click.stop="toggleGroup(g)">
-                  <i class="pi pi-times text-[0.6rem]" />
-                </button>
-              </span>
-            </div>
-            <div class="flex gap-1">
-              <input
-                v-model="customGroup"
-                type="text"
-                placeholder="New group name…"
-                class="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-white/25 focus:bg-white/10"
-                @keydown.enter.prevent="addCustomGroup"
-              />
-              <button
-                type="button"
-                class="rounded bg-white/10 px-2.5 py-1 text-xs text-slate-300 transition hover:bg-white/20 disabled:opacity-40"
-                :disabled="!customGroup.trim()"
-                @click.stop="addCustomGroup"
-              >
-                Add
               </button>
             </div>
           </div>

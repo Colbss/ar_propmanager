@@ -219,21 +219,8 @@ const place = async () => {
     <div class="grid grid-cols-2 gap-3">
       <div class="flex flex-col gap-1.5">
         <label class="text-xs font-medium text-slate-400">Group</label>
-        <!-- Restricted: fixed group buttons -->
-        <div v-if="addPropStore.allowedGroups.length > 0" class="flex flex-wrap gap-1">
-          <button
-            v-for="g in existingGroups"
-            :key="g"
-            type="button"
-            class="rounded px-2 py-1 text-xs transition"
-            :class="form.group === g
-              ? 'bg-blue-600/60 text-blue-200 ring-1 ring-blue-500/40'
-              : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
-            @click.stop="form.group = g"
-          >{{ g }}</button>
-        </div>
-        <!-- Unrestricted: styled dropdown -->
-        <div v-else class="relative">
+        <!-- Group dropdown (existingGroups is scoped to allowedGroups for restricted players) -->
+        <div class="relative">
           <div class="pointer-events-none absolute inset-y-0 left-2.5 flex items-center">
             <i class="pi pi-tag text-xs text-slate-500" />
           </div>
