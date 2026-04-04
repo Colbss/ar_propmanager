@@ -290,7 +290,7 @@ const deleteFromCluster = (prop: PropEntry) => {
       </div>
 
       <!-- Prop rows — single selected prop or cluster list, same layout -->
-      <div class="max-h-[15vh] overflow-y-auto">
+      <div class="max-h-[10vh] overflow-y-auto">
         <div
           v-for="prop in selected ? [selected] : selectedCluster"
           :key="prop.id"

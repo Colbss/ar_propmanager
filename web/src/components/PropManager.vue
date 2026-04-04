@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import PropManagerWindow from './PropManagerWindow.vue'
 import { useNuiEvent } from '../composables/useNuiEvent'
 import { useApi } from '../composables/useApi'
@@ -70,13 +70,44 @@ useNuiEvent<PlayerAccessEntry>('playerAccessSaved', (entry) => {
 useNuiEvent('closePropManager', () => {
   windowVisible.value = false
 })
+
+function closeWindow() {
+  useApi('ClosePropManager', { method: 'POST', body: '{}' }, undefined, {}).then(() => {
+    windowVisible.value = false
+  })
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (!windowVisible.value) return
+  if (e.key === 'Escape' || e.key === 'Backspace') {
+    const tag = (document.activeElement as HTMLElement)?.tagName
+    if (tag !== 'INPUT' && tag !== 'TEXTAREA') closeWindow()
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <PropManagerWindow
-    v-if="windowVisible"
-    v-model:activeTab="activeTab"
-    :level="level"
-    @close="useApi('ClosePropManager', { method: 'POST', body: '{}' }, undefined, {}).then(() => { windowVisible = false })"
-  />
+  <Transition name="window-fade">
+    <PropManagerWindow
+      v-if="windowVisible"
+      v-model:activeTab="activeTab"
+      :level="level"
+      @close="closeWindow"
+    />
+  </Transition>
 </template>
+
+<style>
+.window-fade-enter-active,
+.window-fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.window-fade-enter-from,
+.window-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.97);
+}
+</style>

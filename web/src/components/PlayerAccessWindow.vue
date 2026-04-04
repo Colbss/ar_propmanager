@@ -154,7 +154,7 @@ const requestDelete = (id: number) => {
 
 <template>
   <!-- ─── Restricted access view (level 0) ──────────────────────────────────── -->
-  <div v-if="props.level === 0" class="flex h-[50vh] flex-col">
+  <div v-if="props.level === 0" class="flex min-h-[50vh] flex-col">
     <div class="flex items-center gap-2 border-b border-white/10 px-4 py-2.5">
       <i class="pi pi-lock text-amber-400 text-xs" />
       <span class="text-xs font-semibold text-amber-300">Restricted Access</span>
@@ -162,7 +162,7 @@ const requestDelete = (id: number) => {
 
     <div v-if="myEntry" class="flex flex-col gap-3 p-4">
       <p class="text-xs text-slate-400">
-        You have been granted access to manage props within the following area.
+        You have been granted access to manage props within the following areas.
       </p>
 
       <!-- Groups -->
@@ -199,7 +199,7 @@ const requestDelete = (id: number) => {
   </div>
 
   <!-- ─── Full management view (level >= 3) ─────────────────────────────────── -->
-  <div v-else class="flex h-[50vh] flex-col" @mousedown="pendingDelete = null">
+  <div v-else class="flex min-h-[50vh] flex-col" @mousedown="pendingDelete = null">
     <!-- Toolbar -->
     <div class="flex items-center justify-between border-b border-white/10 px-4 py-2">
       <span class="text-xs text-slate-500">{{ store.entries.length }} player{{ store.entries.length !== 1 ? 's' : '' }} with access</span>

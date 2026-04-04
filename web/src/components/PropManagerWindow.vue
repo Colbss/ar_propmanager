@@ -52,12 +52,11 @@ const visibleTabs = computed(() =>
 </script>
 
 <template>
-  <Transition name="window-fade">
-    <div
-      ref="windowEl"
-      :style="style"
-      class="fixed z-20 flex max-h-[85vh] w-[clamp(440px,35vw,620px)] flex-col overflow-hidden rounded-xl border border-white/10 bg-black/85 text-white shadow-2xl"
-    >
+  <div
+    ref="windowEl"
+    :style="style"
+    class="fixed z-20 flex max-h-[85vh] w-[clamp(440px,35vw,620px)] flex-col overflow-hidden rounded-xl border border-white/10 bg-black/85 text-white shadow-2xl"
+  >
       <!-- Title bar -->
       <div
         ref="titleBar"
@@ -107,10 +106,9 @@ const visibleTabs = computed(() =>
         <PlayerAccessWindow v-else                                   :level="level" />
       </div>
     </div>
-  </Transition>
 </template>
 
-<style scoped>
+<style>
 .window-fade-enter-active,
 .window-fade-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;

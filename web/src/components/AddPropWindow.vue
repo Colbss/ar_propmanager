@@ -282,10 +282,19 @@ const place = async () => {
         </div>
       </template>
       <template v-else>
-        <label class="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-400">
-          <input v-model="form.hasExpiry" type="checkbox" class="accent-blue-500" />
-          Set Expiry
-        </label>
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-medium text-slate-400">Expiry</label>
+          <button
+            type="button"
+            class="rounded px-2 py-1 text-xs transition"
+            :class="form.hasExpiry
+              ? 'bg-blue-600/60 text-blue-200 ring-1 ring-blue-500/40'
+              : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
+            @click.stop="form.hasExpiry = !form.hasExpiry"
+          >
+            {{ form.hasExpiry ? 'Enabled' : 'Disabled' }}
+          </button>
+        </div>
         <Transition name="form-slide">
           <input
             v-if="form.hasExpiry"
