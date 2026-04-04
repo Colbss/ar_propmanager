@@ -96,7 +96,7 @@ useNuiEvent<{
   gizmoStore.restrictRotationAxes = entity.restrictRotationAxes ?? false
 
   mesh.position.set(entity.position.x, entity.position.z, -entity.position.y)
-  mesh.quaternion.set(entity.quaternion.x, entity.quaternion.y, entity.quaternion.z, entity.quaternion.w)
+  mesh.quaternion.set(entity.quaternion.x, entity.quaternion.z, -entity.quaternion.y, entity.quaternion.w)
   syncDisplay()
 
   transformControls.attach(mesh)
@@ -110,7 +110,7 @@ useNuiEvent<{
   if (!mesh || !gizmoStore.isVisible) return
 
   mesh.position.set(data.position.x, data.position.z, -data.position.y)
-  mesh.quaternion.set(data.quaternion.x, data.quaternion.y, data.quaternion.z, data.quaternion.w)
+  mesh.quaternion.set(data.quaternion.x, data.quaternion.z, -data.quaternion.y, data.quaternion.w)
   syncDisplay()
 })
 

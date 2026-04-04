@@ -24,20 +24,5 @@ export const usePropListStore = defineStore('propList', () => {
     return map
   })
 
-  const teleport = (id: string) => {
-    useApi('TeleportToProp', { method: 'POST', body: JSON.stringify({ id }) }, undefined, {})
-  }
-
-  const outline = (id: string) => {
-    useApi('OutlineProp', { method: 'POST', body: JSON.stringify({ id }) }, undefined, {})
-    const prop = props.value.find((p) => p.id === id)
-    if (prop) prop.outlined = !prop.outlined
-  }
-
-  const deleteProp = (id: string) => {
-    useApi('DeleteProp', { method: 'POST', body: JSON.stringify({ id }) }, undefined, {})
-    props.value = props.value.filter((p) => p.id !== id)
-  }
-
-  return { isVisible, props, groups, teleport, outline, deleteProp }
+  return { isVisible, props, groups}
 })

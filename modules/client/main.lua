@@ -102,7 +102,17 @@ end)
 
 AddEventHandler('onClientResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
+    Wait(1000)
     lib.callback('ar_propmanager:getSpawnData', false, function(payload)
         if payload then applySpawnPayload(payload) end
     end)
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+    for id, entity in pairs(spawnedProps) do
+        if entity and DoesEntityExist(entity) then
+            DeleteEntity(entity)
+        end
+    end
 end)

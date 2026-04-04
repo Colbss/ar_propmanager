@@ -1,5 +1,7 @@
 -- ─── Prop Manager ─────────────────────────────────────────────────────────────
 
+local outlinedProps = {} -- prop IDs currently outlined in-game
+
 --- Open the prop manager window.
 --- @param payload table  { level, props, groupStates, ... }
 function OpenPropManager(payload)
@@ -85,7 +87,10 @@ RegisterNUICallback('EditProp', function(data, cb)
         if not prop then cb('error') return end
 
         local pos = prop.position
-        SetEntityCoords(PlayerPedId(), pos.x, pos.y, pos.z + 1.0, false, false, false, false)
+        if #vector3(pos.x, pos.y, pos.z) - GetEntityCoords(PlayerPedId()) > 50.0 then
+            cb('too_far')
+            return
+        end
 
         local attempts = 0
         while not spawnedProps[id] and attempts < 20 do
@@ -132,11 +137,28 @@ RegisterNUICallback('TeleportToProp', function(data, cb)
     end, data.id)
 end)
 
-RegisterNUICallback('OutlineProp', function(_, cb)
+RegisterNUICallback('OutlineProp', function(data, cb)
+    local id     = data.id
+    local handle = spawnedProps[id]
+    if not handle or not DoesEntityExist(handle) then cb('error') return end
+
+    local enabled = not outlinedProps[id]
+    SetEntityDrawOutline(handle, enabled)
+    if enabled then SetEntityDrawOutlineColor(48, 111, 178, 255) end
+    outlinedProps[id] = enabled or nil
+
     cb('ok')
 end)
 
-RegisterNUICallback('OutlineAllProps', function(_, cb)
+RegisterNUICallback('OutlineAllProps', function(data, cb)
+    local enabled = data.outlined
+    for id, handle in pairs(spawnedProps) do
+        if DoesEntityExist(handle) then
+            SetEntityDrawOutline(handle, enabled)
+            if enabled then SetEntityDrawOutlineColor(48, 111, 178, 255) end
+            outlinedProps[id] = enabled or nil
+        end
+    end
     cb('ok')
 end)
 
@@ -214,8 +236,9 @@ end)
 
 RegisterNetEvent('ar_propmanager:propsRemoved', function(ids)
     for _, id in ipairs(ids) do
-        despawnPropLocal(id)
-        propCache[id] = nil
+        despawnProp(id)
+        propCache[id]    = nil
+        outlinedProps[id] = nil
     end
     SendNUIMessage({ action = 'removeProps', data = { ids = ids } })
 end)
@@ -278,7 +301,7 @@ local function buildPropEntryFromCache(id, prop)
         position       = prop.position,
         quaternion     = prop.quaternion,
         group          = prop.group,
-        outlined       = false,
+        outlined       = outlinedProps[id] == true,
         renderDistance = prop.renderDistance or 200,
         expiresAt      = prop.expiresAt,
     }

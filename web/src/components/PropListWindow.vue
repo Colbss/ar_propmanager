@@ -4,7 +4,7 @@ import { usePropManagerStore } from '../stores/propmanager.store'
 
 const props = defineProps<{ canManage: boolean; canEdit: boolean; canTeleport: boolean }>()
 
-const store = usePropManagerStore()
+const pmStore = usePropManagerStore()
 
 // ─── Group collapse state (persisted in store) ────────────────────────────────
 
@@ -29,7 +29,7 @@ const pendingDelete = ref<number | null>(null)
 
 const requestDelete = (id: number) => {
   if (pendingDelete.value === id) {
-    store.deleteProp(id)
+    pmStore.deleteProp(id)
     pendingDelete.value = null
   } else {
     pendingDelete.value = id
@@ -40,18 +40,18 @@ const cancelDelete = () => {
   pendingDelete.value = null
 }
 
-const isGroupEnabled = (name: string) => store.groupStates[name] !== false
+const isGroupEnabled = (name: string) => pmStore.groupStates[name] !== false
 </script>
 
 <template>
   <div class="flex h-[50vh] flex-col" @mousedown="cancelDelete">
     <!-- Prop list -->
     <div class="min-h-0 flex-1 overflow-y-auto">
-      <div v-if="store.groups.size === 0" class="py-8 text-center text-xs text-slate-500">
+      <div v-if="pmStore.groups.size === 0" class="py-8 text-center text-xs text-slate-500">
         No props found.
       </div>
 
-      <div v-for="[groupName, groupProps] in store.groups" :key="groupName">
+      <div v-for="[groupName, groupProps] in pmStore.groups" :key="groupName">
         <!-- Group header -->
         <div
           class="flex w-full items-center border-b border-white/5 bg-white/5 px-3 py-2 text-xs"
@@ -60,10 +60,10 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
           <!-- Collapse toggle -->
           <button
             class="flex flex-1 items-center gap-2 text-left font-semibold uppercase tracking-wider text-slate-400 transition hover:text-slate-200"
-            @click.stop="store.toggleCollapsed(groupName)"
+            @click.stop="pmStore.toggleCollapsed(groupName)"
           >
             <i
-              :class="store.collapsedGroups.has(groupName) ? 'pi-chevron-right' : 'pi-chevron-down'"
+              :class="pmStore.collapsedGroups.has(groupName) ? 'pi-chevron-right' : 'pi-chevron-down'"
               class="pi text-[0.7rem] text-slate-500"
             />
             {{ groupName }}
@@ -86,7 +86,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
               class="rounded p-1 transition hover:bg-white/10"
               :class="isGroupEnabled(groupName) ? 'text-green-400 hover:text-green-300' : 'text-slate-500 hover:text-slate-300'"
               :title="isGroupEnabled(groupName) ? 'Disable group (despawn all props)' : 'Enable group (spawn all props)'"
-              @click.stop="store.toggleGroup(groupName, !isGroupEnabled(groupName))"
+              @click.stop="pmStore.toggleGroup(groupName, !isGroupEnabled(groupName))"
             >
               <i class="pi pi-power-off text-xs" />
             </button>
@@ -94,7 +94,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
         </div>
 
         <!-- Prop rows -->
-        <template v-if="!store.collapsedGroups.has(groupName)">
+        <template v-if="!pmStore.collapsedGroups.has(groupName)">
           <div
             v-for="prop in groupProps"
             :key="prop.id"
@@ -143,7 +143,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
                   class="rounded px-2 py-1 text-slate-400 transition hover:bg-white/10 hover:text-slate-100"
                   :disabled="!isGroupEnabled(groupName)"
                   title="Teleport to prop"
-                  @click.stop="store.teleport(prop.id)"
+                  @click.stop="pmStore.teleport(prop.id)"
                 >
                   <i class="pi pi-map-marker text-xs" />
                 </button>
@@ -154,7 +154,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
                   class="rounded px-2 py-1 text-slate-400 transition hover:bg-white/10 hover:text-slate-100"
                   :disabled="!isGroupEnabled(groupName)"
                   title="Move prop"
-                  @click.stop="store.editProp(prop.id)"
+                  @click.stop="pmStore.editProp(prop.id)"
                 >
                   <i class="pi pi-arrows-alt text-xs" />
                 </button>
@@ -165,7 +165,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
                   :disabled="!isGroupEnabled(groupName)"
                   :class="prop.outlined ? 'text-yellow-400 hover:text-yellow-300' : 'text-slate-400 hover:text-slate-100'"
                   title="Toggle outline"
-                  @click.stop="store.outline(prop.id)"
+                  @click.stop="pmStore.outline(prop.id)"
                 >
                   <i class="pi pi-eye text-xs" />
                 </button>
@@ -190,7 +190,7 @@ const isGroupEnabled = (name: string) => store.groupStates[name] !== false
 
     <!-- Footer: total count -->
     <div class="flex h-[3vh] shrink-0 items-center border-t border-white/5 px-4 text-[0.7rem] text-slate-600">
-      {{ store.props.length }} prop{{ store.props.length !== 1 ? 's' : '' }} across {{ store.groups.size }} group{{ store.groups.size !== 1 ? 's' : '' }}
+      {{ pmStore.props.length }} prop{{ pmStore.props.length !== 1 ? 's' : '' }} across {{ pmStore.groups.size }} group{{ pmStore.groups.size !== 1 ? 's' : '' }}
     </div>
   </div>
 </template>
