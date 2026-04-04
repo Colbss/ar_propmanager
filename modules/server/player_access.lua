@@ -55,6 +55,9 @@ lib.callback.register('ar_propmanager:getOnlinePlayers', function(source)
 
     local players = {}
     for _, playerId in ipairs(GetPlayers()) do
+        if tonumber(playerId) == source then
+            goto continue
+        end
         local identifier = getIdentifier(tonumber(playerId))
         if identifier then
             players[#players + 1] = {
@@ -62,6 +65,7 @@ lib.callback.register('ar_propmanager:getOnlinePlayers', function(source)
                 identifier = identifier,
             }
         end
+        ::continue::
     end
     return players
 end)

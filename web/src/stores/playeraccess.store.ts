@@ -38,7 +38,7 @@ export const usePlayerAccessStore = defineStore('playerAccess', () => {
     useApi<OnlinePlayer[]>(
       'GetOnlinePlayers',
       { method: 'POST', body: JSON.stringify({}) },
-      {},
+      undefined,
       mockOnlinePlayers,
     ).then((result) => {
       onlinePlayers.value = result.data?.value ?? []
