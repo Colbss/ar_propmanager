@@ -219,6 +219,7 @@ MySQL.ready(function()
     CreateThread(function()
         Wait(200)
         loadData()
+        GlobalState:set('arPropManagerReady', true, true)
     end)
 end)
 
@@ -227,3 +228,10 @@ if Framework then
 else
     print('^5No framework detected, prop manager functionalities will not work properly.^7')
 end
+
+-- ─── Shutdown ─────────────────────────────────────────────────────────────────
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+    GlobalState:set('arPropManagerReady', false, true)
+end)

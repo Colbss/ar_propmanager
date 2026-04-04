@@ -102,14 +102,23 @@ CreateThread(function()
     end
 end)
 
--- ─── Handlers ──────────────────────────────────────────────────
+-- ─── Startup ──────────────────────────────────────────────────
+
+function RequestData()
+    lib.print.info('Waiting for server...')
+    while not GlobalState.arPropManagerReady do
+        Wait(100)
+    end
+    lib.print.info('Server ready, requesting prop data...')
+    lib.callback('ar_propmanager:getSpawnData', false, function(payload)
+        if payload then applySpawnPayload(payload) end
+    end)
+end
 
 if Framework then
     lib.print.info((string.format('Framework detected: %s', Framework.Name)))
     function Framework.OnLoaded()
-        lib.callback('ar_propmanager:getSpawnData', false, function(payload)
-            if payload then applySpawnPayload(payload) end
-        end)
+        RequestData()
     end
     function Framework.OnUnloaded()
         for id, entity in pairs(spawnedProps) do
@@ -125,11 +134,10 @@ end
 AddEventHandler('onClientResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
     if not Framework?.IsLoaded() then return end
-    Wait(1000)
-    lib.callback('ar_propmanager:getSpawnData', false, function(payload)
-        if payload then applySpawnPayload(payload) end
-    end)
+    RequestData()
 end)
+
+-- ─── Shutdown ─────────────────────────────────────────────────────────────────
 
 AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
