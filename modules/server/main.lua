@@ -221,3 +221,9 @@ MySQL.ready(function()
         loadData()
     end)
 end)
+
+if Framework then
+    print(string.format('^5Framework detected: %s^7', Framework.Name))
+else
+    print('^5No framework detected, prop manager functionalities will not work properly.^7')
+end

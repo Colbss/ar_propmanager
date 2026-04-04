@@ -59,9 +59,9 @@ export const useGizmoStore = defineStore('gizmo', () => {
     spaceMode.value = spaceMode.value === 'world' ? 'local' : 'world'
   }
 
-  const moveEntity = (position: object, quaternion: object) => {
+  const transformEntity = (position: object, quaternion: object) => {
     useApi(
-      'MoveEntity',
+      'TransformEntity',
       { method: 'POST', body: JSON.stringify({ position, quaternion }) },
       undefined,
       {}
@@ -97,7 +97,7 @@ export const useGizmoStore = defineStore('gizmo', () => {
     applyManualTransform,
     toggleEditorMode,
     toggleSpaceMode,
-    moveEntity,
+    transformEntity,
     snapToGround,
     resetRotation,
     finish,

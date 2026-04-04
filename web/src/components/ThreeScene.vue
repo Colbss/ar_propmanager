@@ -75,7 +75,7 @@ function handleObjectChange() {
   const pos = mesh.position
   const quat = mesh.quaternion
 
-  gizmoStore.moveEntity(
+  gizmoStore.transformEntity(
     { x: pos.x, y: -pos.z, z: pos.y },
     { x: quat.x, y: -quat.z, z: quat.y, w: quat.w }
   )
@@ -173,7 +173,7 @@ watch(
     const quat = new THREE.Quaternion().setFromEuler(euler)
     mesh.quaternion.copy(quat)
 
-    gizmoStore.moveEntity(
+    gizmoStore.transformEntity(
       { x: pos.x, y: pos.y, z: pos.z },
       { x: quat.x, y: -quat.z, z: quat.y, w: quat.w }
     )

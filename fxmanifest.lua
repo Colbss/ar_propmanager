@@ -18,11 +18,13 @@ shared_script {
 
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
+    'modules/bridge/server/*.lua',
 	'modules/server/*.lua',
 }
 
 client_scripts {
     '@qbx_core/modules/playerdata.lua',
+    'modules/bridge/client/*.lua',
 	'modules/client/*.lua',
 }
 

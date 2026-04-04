@@ -44,8 +44,6 @@ local function GetKeyLabel(commandHash)
     return specialkeyCodes[key] or 'unknown'
 end
 
-local CloseGizmo -- forward declaration (keybind callbacks reference it before definition)
-
 keybinds = {}
 
 keybinds.mode = lib.addKeybind({
@@ -177,7 +175,7 @@ end
 
 --- Close the active gizmo session.
 --- @param save boolean  true = confirm placement and fire onFinish, false = cancel and fire onCancel
-CloseGizmo = function(save)
+function CloseGizmo(save)
     if not gizmoActive then return end
     gizmoActive = false
 
@@ -219,7 +217,7 @@ end
 
 -- ─── Gizmo NUI callbacks ──────────────────────────────────────────────────────
 
-RegisterNUICallback('MoveEntity', function(data, cb)
+RegisterNUICallback('TransformEntity', function(data, cb)
     if not currentGizmoEntity or not DoesEntityExist(currentGizmoEntity) then cb('error') return end
 
     SetEntityCoords(currentGizmoEntity, data.position.x, data.position.y, data.position.z, false, false, false, false)
@@ -285,31 +283,6 @@ RegisterNUICallback('Cancel', function(_, cb)
     CloseGizmo(false)
     cb('ok')
 end)
-
--- ─── Dev command ─────────────────────────────────────────────────────────────
-
-RegisterCommand('test_gizmo', function(source, args)
-    local model     = args[1] or 'prop_bench_01a'
-    local modelHash = GetHashKey(model)
-
-    RequestModel(modelHash)
-    while not HasModelLoaded(modelHash) do Wait(10) end
-
-    local ped     = PlayerPedId()
-    local pos     = GetEntityCoords(ped)
-    local heading = GetEntityHeading(ped)
-
-    local prop = CreateObject(
-        modelHash,
-        pos.x + math.sin(math.rad(-heading)) * 3.0,
-        pos.y + math.cos(math.rad(-heading)) * 3.0,
-        pos.z,
-        true, true, false
-    )
-
-    SetModelAsNoLongerNeeded(modelHash)
-    OpenGizmo(prop)
-end, false)
 
 -- ─── Exports ─────────────────────────────────────────────────────────────────
 

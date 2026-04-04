@@ -56,6 +56,8 @@ local function applySpawnPayload(payload)
             propCache[id] = nil
         end
     end
+
+    print('Props loaded:', #payload.props)
 end
 
 -- ─── Spawn management thread ──────────────────────────────────────────────────
@@ -100,8 +102,29 @@ CreateThread(function()
     end
 end)
 
+-- ─── Handlers ──────────────────────────────────────────────────
+
+if Framework then
+    lib.print.info((string.format('Framework detected: %s', Framework.Name)))
+    function Framework.OnLoaded()
+        lib.callback('ar_propmanager:getSpawnData', false, function(payload)
+            if payload then applySpawnPayload(payload) end
+        end)
+    end
+    function Framework.OnUnloaded()
+        for id, entity in pairs(spawnedProps) do
+            if entity and DoesEntityExist(entity) then
+                DeleteEntity(entity)
+            end
+        end
+    end
+else
+    lib.print.error('No framework detected, prop manager functionalities will not work properly.')
+end
+
 AddEventHandler('onClientResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
+    if not Framework?.IsLoaded() then return end
     Wait(1000)
     lib.callback('ar_propmanager:getSpawnData', false, function(payload)
         if payload then applySpawnPayload(payload) end
@@ -116,3 +139,6 @@ AddEventHandler('onResourceStop', function(resourceName)
         end
     end
 end)
+
+
+
