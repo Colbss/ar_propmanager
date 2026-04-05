@@ -14,6 +14,6 @@ return {
     ace = {
         [1] = 'mod',
         [2] = 'admin',
-        [3] = 'admin',
+        [3] = 'superadmin',
     },
 }
