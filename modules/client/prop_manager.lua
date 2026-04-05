@@ -114,6 +114,8 @@ RegisterNUICallback('EditProp', function(data, cb)
         local origPos             = GetEntityCoords(entity)
         local oqx, oqy, oqz, oqw = GetEntityQuaternion(entity)
 
+        SetEntityCollision(entity, false, false)
+
         ClosePropManager()
         OpenGizmo(entity, {}, function(position, quaternion)
             TriggerServerEvent('ar_propmanager:saveProp', {
@@ -130,6 +132,11 @@ RegisterNUICallback('EditProp', function(data, cb)
                 SetEntityCoords(e, origPos.x, origPos.y, origPos.z, false, false, false, false)
                 SetEntityQuaternion(e, oqx, oqy, oqz, oqw)
                 FreezeEntityPosition(e, true)
+                SetEntityCollision(e, true, true)
+            end
+        end, function(e)
+            if DoesEntityExist(e) then 
+                SetEntityCollision(e, true, true)
             end
         end)
 
