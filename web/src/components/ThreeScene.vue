@@ -1,55 +1,15 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { shallowRef, watch } from 'vue'
 import * as THREE from 'three'
-import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js'
+import { TresCanvas } from '@tresjs/core'
+import { TransformControls } from '@tresjs/cientos'
 import { useNuiEvent } from '../composables/useNuiEvent'
 import { useGizmoStore } from '../stores/gizmo.store'
 
-const canvasRef = ref<HTMLCanvasElement | null>(null)
 const gizmoStore = useGizmoStore()
 
-let renderer: THREE.WebGLRenderer | null = null
-let camera: THREE.PerspectiveCamera
-let scene: THREE.Scene
-let transformControls: TransformControls
-let mesh: THREE.Mesh
-let animFrameId: number
-
-// ─── Init ────────────────────────────────────────────────────────────────────
-
-function initThree() {
-  if (!canvasRef.value) return
-
-  renderer = new THREE.WebGLRenderer({ canvas: canvasRef.value, alpha: true, antialias: true })
-  renderer.setPixelRatio(window.devicePixelRatio)
-  renderer.setSize(window.innerWidth, window.innerHeight)
-  renderer.setClearColor(0x000000, 0)
-
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 10000)
-  camera.position.set(0, 0, 10)
-
-  scene = new THREE.Scene()
-
-  // Invisible placeholder – TransformControls needs an Object3D to attach to
-  mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(0.001, 0.001, 0.001),
-    new THREE.MeshBasicMaterial({ visible: false })
-  )
-  scene.add(mesh)
-
-  transformControls = new TransformControls(camera, renderer.domElement)
-  transformControls.setSize(0.5)
-  scene.add(transformControls.getHelper())
-
-  transformControls.addEventListener('objectChange', handleObjectChange)
-
-  animate()
-}
-
-function animate() {
-  animFrameId = requestAnimationFrame(animate)
-  renderer?.render(scene, camera)
-}
+const cameraRef = shallowRef<THREE.PerspectiveCamera | null>(null)
+const meshRef = shallowRef<THREE.Mesh | null>(null)
 
 // ─── Coordinate helpers ───────────────────────────────────────────────────────
 // FiveM uses Z-up; Three.js uses Y-up.
@@ -57,9 +17,9 @@ function animate() {
 // Three.js → FiveM:  (x, y, z) → (x, -z, y)
 // Quaternion → FiveM: (x, y, z, w) → (x, -z, y, w)
 
-// ─── Transform change handler ─────────────────────────────────────────────────
-
 function syncDisplay() {
+  const mesh = meshRef.value
+  if (!mesh) return
   const pos = mesh.position
   const euler = new THREE.Euler().setFromQuaternion(mesh.quaternion, 'YZX')
   const toDeg = THREE.MathUtils.radToDeg
@@ -70,11 +30,10 @@ function syncDisplay() {
 }
 
 function handleObjectChange() {
+  const mesh = meshRef.value
   if (!gizmoStore.isVisible || !mesh) return
-
   const pos = mesh.position
   const quat = mesh.quaternion
-
   gizmoStore.transformEntity(
     { x: pos.x, y: -pos.z, z: pos.y },
     { x: quat.x, y: -quat.z, z: quat.y, w: quat.w }
@@ -90,7 +49,8 @@ useNuiEvent<{
   keybinds?: { mode: { key: string; description: string }; focus: { key: string; description: string }; finish: { key: string; description: string }; cancel: { key: string; description: string } }
   restrictRotationAxes?: boolean
 }>('initGizmo', (entity) => {
-  if (!mesh || !transformControls) return
+  const mesh = meshRef.value
+  if (!mesh) return
 
   if (entity.keybinds) gizmoStore.keys = entity.keybinds
   gizmoStore.restrictRotationAxes = entity.restrictRotationAxes ?? false
@@ -99,7 +59,6 @@ useNuiEvent<{
   mesh.quaternion.set(entity.quaternion.x, entity.quaternion.z, -entity.quaternion.y, entity.quaternion.w)
   syncDisplay()
 
-  transformControls.attach(mesh)
   gizmoStore.isVisible = true
 })
 
@@ -107,6 +66,7 @@ useNuiEvent<{
   position: { x: number; y: number; z: number }
   quaternion: { x: number; y: number; z: number; w: number }
 }>('updateGizmoTransform', (data) => {
+  const mesh = meshRef.value
   if (!mesh || !gizmoStore.isVisible) return
 
   mesh.position.set(data.position.x, data.position.z, -data.position.y)
@@ -115,16 +75,14 @@ useNuiEvent<{
 })
 
 useNuiEvent('closeGizmo', () => {
-  if (!transformControls) return
-  transformControls.detach()
   gizmoStore.isVisible = false
 })
 
 useNuiEvent<{
   position: { x: number; y: number; z: number }
   rotation: { x: number; y: number; z: number }
-  fov?: number
-}>('setCameraPosition', ({ position, rotation, fov }) => {
+}>('setCameraPosition', ({ position, rotation }) => {
+  const camera = cameraRef.value
   if (!camera) return
 
   camera.position.set(position.x, position.z, -position.y)
@@ -141,17 +99,14 @@ useNuiEvent<{
     THREE.MathUtils.degToRad(rotation.y)
   )
 
-  if (fov) camera.fov = fov
   camera.updateProjectionMatrix()
 })
 
-// Toggle edit mode from Lua keybind
 useNuiEvent('toggleMode', () => {
-  if (!transformControls) return
   gizmoStore.toggleEditorMode()
 })
 
-// ─── Watchers ─────────────────────────────────────────────────────────────────
+// ─── Manual transform input ───────────────────────────────────────────────────
 
 // Reverse of syncDisplay: FiveM (rx,ry,rz) degrees → Three.js Euler 'YZX'
 // From syncDisplay: fivem.x=deg(e.x), fivem.y=deg(-e.z), fivem.z=deg(e.y)
@@ -159,6 +114,7 @@ useNuiEvent('toggleMode', () => {
 watch(
   () => gizmoStore.manualTransform,
   (transform) => {
+    const mesh = meshRef.value
     if (!transform || !mesh || !gizmoStore.isVisible) return
 
     const { position: pos, rotation: rot } = transform
@@ -181,53 +137,37 @@ watch(
     gizmoStore.manualTransform = null
   }
 )
-
-watch(
-  () => gizmoStore.editorMode,
-  (mode) => transformControls?.setMode(mode)
-)
-
-watch(
-  () => gizmoStore.spaceMode,
-  (space) => transformControls?.setSpace(space)
-)
-
-watch(
-  [() => gizmoStore.restrictRotationAxes, () => gizmoStore.editorMode],
-  ([restrict, mode]) => {
-    if (!transformControls) return
-    const hide = restrict && mode === 'rotate'
-    transformControls.showX = !hide
-    transformControls.showZ = !hide
-  }
-)
-
-// ─── Lifecycle ────────────────────────────────────────────────────────────────
-
-onMounted(() => {
-  initThree()
-
-  const onResize = () => {
-    if (!renderer || !camera) return
-    camera.aspect = window.innerWidth / window.innerHeight
-    camera.updateProjectionMatrix()
-    renderer.setSize(window.innerWidth, window.innerHeight)
-  }
-
-  window.addEventListener('resize', onResize)
-  onUnmounted(() => window.removeEventListener('resize', onResize))
-})
-
-onUnmounted(() => {
-  cancelAnimationFrame(animFrameId)
-  renderer?.dispose()
-})
 </script>
 
 <template>
-  <canvas
-    ref="canvasRef"
-    class="absolute inset-0 w-full h-full"
+  <TresCanvas
+    alpha
+    :clear-alpha="0"
+    window-size
+    render-mode="always"
+    class="absolute inset-0"
     style="z-index: 1; pointer-events: auto;"
-  />
+  >
+    <TresPerspectiveCamera
+      ref="cameraRef"
+      :near="0.01"
+      :far="10000"
+      :position="[0, 0, 10]"
+      make-default
+    />
+    <TresMesh ref="meshRef">
+      <TresBoxGeometry :args="[0.001, 0.001, 0.001]" />
+      <TresMeshBasicMaterial :visible="false" />
+    </TresMesh>
+    <TransformControls
+      v-if="gizmoStore.isVisible && meshRef"
+      :object="meshRef"
+      :mode="gizmoStore.editorMode"
+      :space="gizmoStore.spaceMode"
+      :size="0.5"
+      :show-x="!(gizmoStore.restrictRotationAxes && gizmoStore.editorMode === 'rotate')"
+      :show-z="!(gizmoStore.restrictRotationAxes && gizmoStore.editorMode === 'rotate')"
+      @change="handleObjectChange"
+    />
+  </TresCanvas>
 </template>

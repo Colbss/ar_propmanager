@@ -188,7 +188,6 @@ function OpenGizmo(entity, options, onFinish, onCancel)
                 data   = {
                     position = { x = camPos.x, y = camPos.y, z = camPos.z },
                     rotation = { x = camRot.x, y = camRot.y, z = camRot.z },
-                    fov      = GetGameplayCamFov(),
                 },
             })
             Wait(0)

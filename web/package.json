@@ -28,6 +28,8 @@
     "primeicons": "^7.0.0",
     "primevue": "^4.2.2",
     "tailwindcss-primeui": "^0.3.4",
+    "@tresjs/cientos": "^5.7.0",
+    "@tresjs/core": "^5.8.0",
     "three": "^0.170.0",
     "valibot": "1.0.0-beta.7",
     "vee-validate": "^4.14.7",
