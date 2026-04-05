@@ -171,13 +171,13 @@ async function pasteVec(target: Vec3Fields, fmt: (n: number) => string) {
         <div class="h-px bg-white/10" />
 
         <!-- Keybinds -->
-        <div class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 px-3">
+        <div class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 px-2">
           <template
             v-for="bind in [gizmoStore.keys.mode, gizmoStore.keys.focus, gizmoStore.keys.finish, gizmoStore.keys.cancel]"
             :key="bind.key"
           >
-            <kbd class="justify-self-center rounded bg-white/15 px-1.5 py-0.5 font-mono text-xs text-slate-100">{{ bind.key }}</kbd>
-            <span class="justify-self-center text-xs text-slate-400">{{ bind.description }}</span>
+            <kbd class="self-center justify-self-center rounded bg-white/15 px-1.5 py-0.5 font-mono text-xs text-slate-100">{{ bind.key }}</kbd>
+            <span class="justify-self-center text-center text-xs text-slate-400">{{ bind.description }}</span>
           </template>
         </div>
 

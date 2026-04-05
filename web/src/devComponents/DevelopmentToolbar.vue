@@ -27,7 +27,7 @@ const testGizmo = () => {
         position: { x: 0, y: 0, z: 0 },
         quaternion: { x: 0, y: 0, z: 0, w: 1 },
         keybinds: {
-          mode:   { key: 'R',    description: 'Change Mode' },
+          mode:   { key: 'R',    description: 'Change Mode With Long Name' },
           focus:  { key: 'F',    description: 'Toggle Focus' },
           finish: { key: 'E',    description: 'Finish' },
           cancel: { key: 'Back', description: 'Cancel' },
