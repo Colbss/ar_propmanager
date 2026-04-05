@@ -154,7 +154,7 @@ const place = async () => {
   placing.value = true
   error.value   = ''
 
-  await useApi(
+  const result = await useApi<string | { error?: string }>(
     'PlaceProp',
     {
       method: 'POST',
@@ -170,10 +170,21 @@ const place = async () => {
       }),
     },
     undefined,
-    {}
+    'ok'
   )
 
   placing.value = false
+
+  const data = result.data.value
+  if (data !== 'ok') {
+    if (typeof data === 'object' && data?.error === 'invalid_model') {
+      error.value = l.value.ui_error_invalid_model
+    } else {
+      error.value = l.value.ui_error_place_failed
+    }
+    return
+  }
+
   emit('done')
 }
 </script>

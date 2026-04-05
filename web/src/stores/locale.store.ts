@@ -31,6 +31,8 @@ const DEFAULTS: UILocales = {
   ui_cancel:                  'Cancel',
   ui_placing:                 'Placing...',
   ui_place_prop:              'Place Prop',
+  ui_error_invalid_model:     'Invalid model - could not be loaded in-game',
+  ui_error_place_failed:      'Failed to place prop',
 
   // PlayerAccessWindow
   ui_restricted_access:           'Restricted Access',
