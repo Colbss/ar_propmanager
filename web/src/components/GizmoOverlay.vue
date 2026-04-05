@@ -74,14 +74,20 @@ function onEscape(
 
 // ─── Copy / Paste ─────────────────────────────────────────────────────────────
 
-function copyVec(v: Vec3Fields) {
-  navigator.clipboard.writeText(`${v.x}, ${v.y}, ${v.z}`)
+let posBuffer: Vec3Fields | null = null
+let rotBuffer: Vec3Fields | null = null
+
+function copyVec(v: Vec3Fields, type: 'pos' | 'rot') {
+  const buf = { x: v.x, y: v.y, z: v.z }
+  if (type === 'pos') posBuffer = buf
+  else rotBuffer = buf
 }
 
-async function pasteVec(target: Vec3Fields, fmt: (n: number) => string) {
-  const text = await navigator.clipboard.readText()
-  const parts = text.split(',').map((s) => parseFloat(s.trim()))
-  if (parts.length !== 3 || parts.some(isNaN)) return
+function pasteVec(target: Vec3Fields, fmt: (n: number) => string, type: 'pos' | 'rot') {
+  const buf = type === 'pos' ? posBuffer : rotBuffer
+  if (!buf) return
+  const parts = [buf.x, buf.y, buf.z].map((s) => parseFloat(s))
+  if (parts.some(isNaN)) return
   target.x = fmt(parts[0])
   target.y = fmt(parts[1])
   target.z = fmt(parts[2])
@@ -102,8 +108,8 @@ async function pasteVec(target: Vec3Fields, fmt: (n: number) => string) {
           <div class="mb-1 flex items-center justify-between">
             <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Position</span>
             <div class="flex gap-1">
-              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="copyVec(localPos)"><i class="pi pi-copy text-xs" /></button>
-              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="pasteVec(localPos, (n) => n.toFixed(1))"><i class="pi pi-clipboard text-xs" /></button>
+              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" title="Copy position" @click="copyVec(localPos, 'pos')"><i class="pi pi-copy text-xs" /></button>
+              <button class="rounded p-0.5 transition hover:text-slate-200" :class="posBuffer ? 'text-slate-400' : 'text-slate-600'" tabindex="-1" title="Paste position" @click="pasteVec(localPos, (n) => n.toFixed(1), 'pos')"><i class="pi pi-file-import text-xs" /></button>
             </div>
           </div>
           <div class="flex flex-col gap-1">
@@ -127,8 +133,8 @@ async function pasteVec(target: Vec3Fields, fmt: (n: number) => string) {
           <div class="mb-1 flex items-center justify-between">
             <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Rotation</span>
             <div class="flex gap-1">
-              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="copyVec(localRot)"><i class="pi pi-copy text-xs" /></button>
-              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="pasteVec(localRot, (n) => Math.round(n).toString())"><i class="pi pi-clipboard text-xs" /></button>
+              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" title="Copy rotation" @click="copyVec(localRot, 'rot')"><i class="pi pi-copy text-xs" /></button>
+              <button class="rounded p-0.5 transition hover:text-slate-200" :class="rotBuffer ? 'text-slate-400' : 'text-slate-600'" tabindex="-1" title="Paste rotation" @click="pasteVec(localRot, (n) => Math.round(n).toString(), 'rot')"><i class="pi pi-file-import text-xs" /></button>
             </div>
           </div>
           <div class="flex flex-col gap-1">
