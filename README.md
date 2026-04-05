@@ -4,7 +4,7 @@
 <img src="https://i.imgur.com/PG7Tx1d.png" width="50%"><img src="https://i.imgur.com/64uxRpX.png" width="50%">
 
 
-Preview available on [streamable](TODO)
+Preview available on [streamable](https://streamable.com/t8yx3k)
 
 ### Requirements
 

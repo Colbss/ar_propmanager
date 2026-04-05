@@ -180,7 +180,7 @@ const requestDelete = (id: number) => {
       <!-- Zones -->
       <div class="flex flex-col gap-1">
         <span class="text-xs text-slate-500">Zone Restrictions</span>
-        <div v-if="!myEntry.zones.length" class="text-xs text-slate-400">No zone restriction — full map access.</div>
+        <div v-if="!myEntry.zones.length" class="text-xs text-slate-400">No zone restriction - full map access.</div>
         <MapAreaViewer v-else :zones="myEntry.zones" height="35vh" />
       </div>
     </div>
@@ -312,7 +312,7 @@ const requestDelete = (id: number) => {
             Add Zone
           </button>
           <p class="mt-1.5 text-[0.7rem] text-slate-500">
-            {{ form.zones.length ? `Player is restricted to ${form.zones.length} zone${form.zones.length !== 1 ? 's' : ''}.` : 'No zones added — player has access to the full map.' }}
+            {{ form.zones.length ? `Player is restricted to ${form.zones.length} zone${form.zones.length !== 1 ? 's' : ''}.` : 'No zones added - player has access to the full map.' }}
           </p>
         </div>
 

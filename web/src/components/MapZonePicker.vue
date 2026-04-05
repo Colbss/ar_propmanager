@@ -46,7 +46,7 @@ let markers: CircleMarker[] = []
 let draftPolygon: Polygon | null = null
 let savedPolygons: Polygon[] = []
 
-// Internal copy — synced to modelValue on mount, then emitted on every change
+// Internal copy - synced to modelValue on mount, then emitted on every change
 const points = ref<Array<{ x: number; y: number }>>([...props.modelValue])
 
 function commitPoints() {
@@ -244,7 +244,7 @@ onUnmounted(() => {
     <div class="flex items-center justify-between border-t border-white/10 bg-black/40 px-3 py-1.5">
       <span class="text-xs text-slate-400">
         {{ points.length }} point{{ points.length !== 1 ? 's' : '' }}
-        <span v-if="points.length < 3" class="text-slate-600"> — need {{ 3 - points.length }} more</span>
+        <span v-if="points.length < 3" class="text-slate-600"> - need {{ 3 - points.length }} more</span>
       </span>
       <div class="flex items-center gap-1.5">
         <button

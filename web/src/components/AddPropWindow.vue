@@ -13,7 +13,7 @@ const propStore    = usePropManagerStore()
 
 const PROP_LIST_URL = 'https://raw.githubusercontent.com/DurtyFree/gta-v-data-dumps/refs/heads/master/ObjectList.ini'
 
-// Module-level cache — survives tab switches, fetched at most once per session
+// Module-level cache - survives tab switches, fetched at most once per session
 let _cachedPropList: string[] | null = null
 
 async function loadPropList(): Promise<string[]> {
@@ -211,7 +211,7 @@ const place = async () => {
       </div>
       <p v-if="searchQuery && !propList.includes(searchQuery)" class="text-[0.7rem] text-amber-400/80">
         <i class="pi pi-exclamation-triangle mr-1 text-[0.6rem]" />
-        Not in list — will be validated in-game
+        Not in list - will be validated in-game
       </p>
     </div>
 

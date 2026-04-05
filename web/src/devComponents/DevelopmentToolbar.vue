@@ -122,10 +122,10 @@ const items = [
       pmStore.isVisible = false
     }
   },
-  { label: 'Prop Manager — Level 0 (restricted · zone)',        command: () => testPropManager(0, mockRestrictedZone) },
-  { label: 'Prop Manager — Level 1 (toggle groups)',       command: () => testPropManager(1) },
-  { label: 'Prop Manager — Level 2 (manage)',              command: () => testPropManager(2) },
-  { label: 'Prop Manager — Level 3 (player access)',       command: () => testPropManager(3) },
+  { label: 'Prop Manager - Level 0 (restricted · zone)',        command: () => testPropManager(0, mockRestrictedZone) },
+  { label: 'Prop Manager - Level 1 (toggle groups)',       command: () => testPropManager(1) },
+  { label: 'Prop Manager - Level 2 (manage)',              command: () => testPropManager(2) },
+  { label: 'Prop Manager - Level 3 (player access)',       command: () => testPropManager(3) },
   { label: 'Close Prop Manager', command: () => debugData({ action: 'closePropManager', data: {} }) },
 ]
 </script>

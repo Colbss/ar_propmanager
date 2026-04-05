@@ -84,7 +84,7 @@ async function initMap() {
   // Deselect when clicking empty map
   map.on('click', clearSelection)
 
-  // Clear cluster list after zoom — the cluster composition changes so the list is stale
+  // Clear cluster list after zoom - the cluster composition changes so the list is stale
   map.on('zoomend', () => { selectedCluster.value = [] })
 
   buildLayers()
@@ -289,7 +289,7 @@ const deleteFromCluster = (prop: PropEntry) => {
         <button class="text-xs text-slate-600 transition hover:text-slate-400" @click="clearSelection">✕</button>
       </div>
 
-      <!-- Prop rows — single selected prop or cluster list, same layout -->
+      <!-- Prop rows - single selected prop or cluster list, same layout -->
       <div class="max-h-[10vh] overflow-y-auto">
         <div
           v-for="prop in selected ? [selected] : selectedCluster"
@@ -316,7 +316,7 @@ const deleteFromCluster = (prop: PropEntry) => {
     <!-- Footer: hint -->
     <div class="flex h-[3vh] shrink-0 items-center border-t border-white/10 px-4">
       <span class="text-xs text-slate-600">
-        {{ mode === 'clusters' ? 'Click a marker or cluster to select' : 'Heatmap — density of placed props' }}
+        {{ mode === 'clusters' ? 'Click a marker or cluster to select' : 'Heatmap - density of placed props' }}
       </span>
     </div>
   </div>
@@ -350,7 +350,7 @@ const deleteFromCluster = (prop: PropEntry) => {
   filter: drop-shadow(0 0 5px rgba(217, 70, 239, 0.9));
 }
 
-/* ── Leaflet tooltip — dark theme ─────────────────────────────────────────── */
+/* ── Leaflet tooltip - dark theme ─────────────────────────────────────────── */
 
 .leaflet-tooltip {
   background: rgba(10, 16, 28, 0.95) !important;

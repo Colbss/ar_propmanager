@@ -92,7 +92,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 <template>
   <Transition name="window-fade">
     <PropManagerWindow
-      v-if="windowVisible"
+      v-show="windowVisible"
       v-model:activeTab="activeTab"
       :level="level"
       @close="closeWindow"

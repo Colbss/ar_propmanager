@@ -7,7 +7,7 @@ return {
     expiryCron = '*/5 * * * *',
 
     -- ─── Permission levels ────────────────────────────────────────────────────
-    -- Levels are cumulative — each level includes all levels below it.
+    -- Levels are cumulative - each level includes all levels below it.
     --   1 (toggleGroups) – enable / disable prop groups
     --   2 (manage)       – add, move and delete props; view the map
     --   3 (playerAccess) – view and edit the player access list
