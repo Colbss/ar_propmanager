@@ -2,6 +2,10 @@ local config = require 'config'
 
 groups = {}
 
+--- Return the named group, creating it if it does not exist.
+--- @param  name     string        Group name
+--- @param  enabled  boolean|nil   Initial enabled state (defaults to true when creating)
+--- @return { enabled: boolean, props: table<integer, table> }
 function getOrCreateGroup(name, enabled)
     if not groups[name] then
         groups[name] = { enabled = (enabled ~= false), props = {} }
@@ -9,6 +13,10 @@ function getOrCreateGroup(name, enabled)
     return groups[name]
 end
 
+--- Return the permission level of a player based on their ACE flags.
+--- 3 = admin, 2 = moderator, 1 = basic access, 0 = no access.
+--- @param  source  integer  Player server ID
+--- @return integer          Permission level (0–3)
 function getPlayerLevel(source)
     if IsPlayerAceAllowed(source, config.ace[3]) then return 3 end
     if IsPlayerAceAllowed(source, config.ace[2]) then return 2 end
@@ -16,10 +24,18 @@ function getPlayerLevel(source)
     return 0
 end
 
+--- Return the license identifier for a player.
+--- @param  source  integer       Player server ID
+--- @return string|nil            License string, or nil if not found
 function getIdentifier(source)
     return GetPlayerIdentifierByType(source, 'license')
 end
 
+--- Test whether a 2-D point lies inside a polygon using ray-casting.
+--- @param  px      number                          X coordinate of the test point
+--- @param  py      number                          Y coordinate of the test point
+--- @param  points  { x: number, y: number }[]      Polygon vertices
+--- @return boolean                                 true if the point is inside the polygon
 function pointInZone(px, py, points)
     if not points or #points < 3 then return false end
     local inside = false
@@ -35,6 +51,12 @@ function pointInZone(px, py, points)
     return inside
 end
 
+--- Check whether a player is allowed to interact with props in the given group and position.
+--- Level 2+ players always have access; level 0 players are checked against DB access records and optional zone restrictions.
+--- @param  source    integer                                                    Player server ID
+--- @param  group     string                                                     Group name to check against
+--- @param  position  { x: number, y: number, z: number }|nil                   World position used for zone-based restriction checks
+--- @return boolean                                                               true if the player has access
 function hasPlayerAccess(source, group, position)
     if getPlayerLevel(source) >= 2 then return true end
 
@@ -62,6 +84,8 @@ function hasPlayerAccess(source, group, position)
     return false
 end
 
+--- Build a flat map of every group name to its current enabled state.
+--- @return table<string, boolean>
 function buildGroupStates()
     local states = {}
     for name, group in pairs(groups) do
@@ -70,6 +94,8 @@ function buildGroupStates()
     return states
 end
 
+--- Build a flat list of all props across every group, ready for client sync.
+--- @return { id: integer, model: string, position: table, quaternion: table, group: string, outlined: boolean, renderDistance: number, expiresAt: integer|nil }[]
 function buildPropList()
     local list = {}
     for groupName, group in pairs(groups) do
@@ -89,10 +115,17 @@ function buildPropList()
     return list
 end
 
+--- Build the full sync payload sent to clients on connect.
+--- @return { props: table[], groupStates: table<string, boolean> }
 function buildSyncPayload()
     return { props = buildPropList(), groupStates = buildGroupStates() }
 end
 
+--- Build a single client-ready prop entry from internal server data.
+--- @param  id         integer  Prop database ID
+--- @param  prop       { model: string, position: table, quat: table, renderDistance: number, expiresAt: integer|nil }  Internal prop data
+--- @param  groupName  string   Group the prop belongs to
+--- @return { id: integer, model: string, position: table, quaternion: table, group: string, outlined: boolean, renderDistance: number, expiresAt: integer|nil }
 function buildPropEntry(id, prop, groupName)
     return {
         id             = id,
@@ -106,18 +139,33 @@ function buildPropEntry(id, prop, groupName)
     }
 end
 
+--- Broadcast a newly-added prop to all connected clients.
+--- @param  id         integer  Prop database ID
+--- @param  prop       table    Internal prop data
+--- @param  groupName  string   Group the prop belongs to
+--- @return nil
 function broadcastPropAdded(id, prop, groupName)
     TriggerClientEvent('ar_propmanager:propAdded', -1, buildPropEntry(id, prop, groupName))
 end
 
+--- Broadcast an updated prop transform/metadata to all connected clients.
+--- @param  id         integer  Prop database ID
+--- @param  prop       table    Internal prop data
+--- @param  groupName  string   Group the prop belongs to
+--- @return nil
 function broadcastPropUpdated(id, prop, groupName)
     TriggerClientEvent('ar_propmanager:propUpdated', -1, buildPropEntry(id, prop, groupName))
 end
 
+--- Broadcast a list of removed prop IDs to all connected clients.
+--- @param  ids  integer[]  Database IDs of the props that were removed
+--- @return nil
 function broadcastPropsRemoved(ids)
     TriggerClientEvent('ar_propmanager:propsRemoved', -1, ids)
 end
 
+--- Broadcast the current enabled state of all groups to all connected clients.
+--- @return nil
 function broadcastGroupStates()
     TriggerClientEvent('ar_propmanager:groupStatesChanged', -1, buildGroupStates())
 end

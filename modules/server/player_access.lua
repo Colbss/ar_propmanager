@@ -1,5 +1,9 @@
 lib.locale()
 
+--- Decode the JSON zones column from a player-access DB row into a Lua table.
+--- Returns an empty table if the column is absent or malformed.
+--- @param  row  { zones: string|nil }  Raw MySQL row from ar_props_player_access
+--- @return { x: number, y: number }[][]  Array of zone polygons (each polygon is an array of points)
 local function rowToZones(row)
     if not row.zones then return {} end
     local ok, zones = pcall(json.decode, row.zones)
@@ -7,6 +11,10 @@ local function rowToZones(row)
     return {}
 end
 
+--- Build the prop-manager open payload tailored to a specific player's access level.
+--- Returns nil when a level-0 player has no access entries.
+--- @param  source  integer   Player server ID
+--- @return { level: integer, props: table[], groupStates: table<string, boolean>, playerAccess: table[]|nil, groups: string[]|nil }|nil
 local function buildPlayerPayload(source)
     local level = getPlayerLevel(source)
 

@@ -37,6 +37,9 @@ local specialkeyCodes = {
     ['b_1055'] = 'Home',       ['b_1056'] = 'PageUp',     ['b_2000'] = 'Space',
 }
 
+--- Returns the human-readable label for a registered keymap command hash.
+--- @param  commandHash number  Control hash from a lib.addKeybind `.hash` field
+--- @return string              Key label, or 'unknown' if unrecognised
 local function GetKeyLabel(commandHash)
     local key = GetControlInstructionalButton(0, commandHash | 0x80000000, true)
     if string.find(key, 't_') then
@@ -80,6 +83,8 @@ keybinds.cancel = lib.addKeybind({
 })
 keybinds.cancel:disable(true)
 
+--- Returns the current display labels and descriptions for all gizmo keybinds.
+--- @return { mode: { key: string, description: string }, focus: { key: string, description: string }, finish: { key: string, description: string }, cancel: { key: string, description: string } }
 function keybinds.GetKeybinds()
     return {
         mode   = { key = GetKeyLabel(keybinds.mode.hash),   description = locale('keybind_mode') },
@@ -111,7 +116,8 @@ local disabledControls = {
 }
 
 --- Toggle NUI focus for the gizmo, optionally overriding the current state.
---- @param override boolean|nil  true = focused, false = unfocused, nil = toggle
+--- @param  override boolean|nil  true = focused, false = unfocused, nil = toggle
+--- @return nil
 function ToggleFocus(override)
     if override ~= nil then
         hasFocus = override
@@ -128,10 +134,11 @@ function ToggleFocus(override)
 end
 
 --- Open the gizmo for the given entity.
---- @param entity   number        Entity handle to manipulate
---- @param options  table|nil     { restrictRotationAxes }
---- @param onFinish function|nil  Called with (position, quaternion) when the player confirms
---- @param onCancel function|nil  Called with no args when the player cancels
+--- @param  entity   number                                                                                                                         Entity handle to manipulate
+--- @param  options  { restrictRotationAxes?: boolean }|nil                                                                                        Gizmo options
+--- @param  onFinish fun(position: { x: number, y: number, z: number }, quaternion: { x: number, y: number, z: number, w: number })|nil            Called when the player confirms placement
+--- @param  onCancel fun(entity: number)|nil                                                                                                        Called when the player cancels
+--- @return nil
 function OpenGizmo(entity, options, onFinish, onCancel)
     
     if not DoesEntityExist(entity) then
@@ -199,7 +206,8 @@ function OpenGizmo(entity, options, onFinish, onCancel)
 end
 
 --- Close the active gizmo session.
---- @param save boolean  true = confirm placement and fire onFinish, false = cancel and fire onCancel
+--- @param  save    boolean  true = confirm placement and fire onFinish, false = cancel and fire onCancel
+--- @return nil
 function CloseGizmo(save)
     if not gizmoActive then return end
     gizmoActive = false

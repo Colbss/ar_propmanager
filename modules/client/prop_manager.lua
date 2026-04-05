@@ -1,13 +1,16 @@
 
 local outlinedProps = {} 
 
---- Open the prop manager window.
---- @param payload table  { level, props, groupStates, ... }
+--- Open the prop manager NUI window with the given data payload.
+--- @param  payload { level: integer, props: table[], groupStates: table<string, boolean>, playerAccess: table[]|nil, groups: string[]|nil }
+--- @return nil
 function OpenPropManager(payload)
     SetNuiFocus(true, true)
     SendNUIMessage({ action = 'openPropManager', data = payload })
 end
 
+--- Close the prop manager NUI window and release NUI focus.
+--- @return nil
 local function ClosePropManager()
     SetNuiFocus(false, false)
     SendNUIMessage({ action = 'closePropManager', data = {} })
@@ -281,6 +284,10 @@ end)
 -- ██     ██  ██ ██ ▀▀ ██ ██ ▀▀ ██ ██▄▄██ ██ ▀▄██ ██  ██ ▀▀▀▄▄▄ 
 -- ▀█████ ▀████▀ ██    ██ ██    ██ ██  ██ ██   ██ ████▀  █████▀ 
 
+--- Build a NUI-ready prop entry from a client-side propCache entry.
+--- @param  id    integer  Prop database ID
+--- @param  prop  { model: string, position: { x: number, y: number, z: number }, quaternion: { x: number, y: number, z: number, w: number }|nil, group: string, renderDistance: number, expiresAt: integer|nil }
+--- @return { id: integer, model: string, position: table, quaternion: table|nil, group: string, outlined: boolean, renderDistance: number, expiresAt: integer|nil }
 local function buildPropEntryFromCache(id, prop)
     return {
         id             = id,

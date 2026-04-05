@@ -10,6 +10,9 @@ groupEnabled = {}
 spawnedProps = {}
 pendingSpawn = {}
 
+--- Remove a spawned prop entity and clear it from all tracking tables.
+--- @param  id  integer  Prop database ID
+--- @return nil
 function despawnProp(id)
     pendingSpawn[id] = nil
     local entity = spawnedProps[id]
@@ -19,6 +22,10 @@ function despawnProp(id)
     spawnedProps[id] = nil
 end
 
+--- Apply a full prop + group-state payload received from the server.
+--- Updates propCache and groupEnabled, spawns/despawns entities as needed.
+--- @param  payload { props: { id: integer, model: string, position: { x: number, y: number, z: number }, quaternion: { x: number, y: number, z: number, w: number }|nil, renderDistance: number|nil, group: string, expiresAt: integer|nil }[], groupStates: table<string, boolean>|nil }
+--- @return nil
 local function applySpawnPayload(payload)
     if payload.groupStates then
         for name, enabled in pairs(payload.groupStates) do
@@ -104,6 +111,8 @@ end)
 -- ██████ ██▄▄██ ██ ▀▄██ ██  ██ ██     ██▄▄   ██▄▄██▄ ▀▀▀▄▄▄ 
 -- ██  ██ ██  ██ ██   ██ ████▀  ██████ ██▄▄▄▄ ██   ██ █████▀ 
 
+--- Wait for the server to be ready then fetch and apply the initial spawn payload.
+--- @return nil
 function RequestData()
     lib.print.info('Waiting for server...')
     while not GlobalState.arPropManagerReady do
@@ -117,9 +126,13 @@ end
 
 if Framework then
     lib.print.info((string.format('Framework detected: %s', Framework.Name)))
+    --- Called by the framework bridge when the local player logs in.
+    --- @return nil
     function Framework.OnLoaded()
         RequestData()
     end
+    --- Called by the framework bridge when the local player logs out.
+    --- @return nil
     function Framework.OnUnloaded()
         for id, entity in pairs(spawnedProps) do
             if entity and DoesEntityExist(entity) then

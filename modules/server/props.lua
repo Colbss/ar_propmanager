@@ -3,6 +3,11 @@ lib.locale()
 
 -- ─── Group toggle ─────────────────────────────────────────────────────────────
 
+--- Enable or disable a prop group, persisting the change to the database and broadcasting to all clients.
+--- No-ops if the group does not exist or the state is already set.
+--- @param  groupName  string   Group name
+--- @param  enabled    boolean  Desired enabled state
+--- @return nil
 function setGroupEnabled(groupName, enabled)
     local group = groups[groupName]
     if not group or group.enabled == enabled then return end
@@ -17,6 +22,9 @@ function setGroupEnabled(groupName, enabled)
     broadcastGroupStates()
 end
 
+--- Remove a group from memory and the database if it has no remaining props.
+--- @param  groupName  string  Group name to check and potentially remove
+--- @return nil
 local function pruneGroupIfEmpty(groupName)
     local group = groups[groupName]
     if not group then return end
@@ -150,6 +158,8 @@ end)
 -- ██     ██▄▄██▄ ██  ██ ██ ▀▄██ 
 -- ▀█████ ██   ██ ▀████▀ ██   ██ 
 
+--- Delete any props whose expiresAt timestamp is in the past, broadcasting removals to all clients.
+--- @return nil
 local function checkExpiredProps()
     local now     = os.time()
     local expired = {}
