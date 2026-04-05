@@ -66,8 +66,8 @@ exports.ar_propmanager:OpenGizmo(entity, options, onFinish, onCancel)
 
 ## Requirements
 
-- [ox_lib](https://github.com/overextended/ox_lib)
-- [oxmysql](https://github.com/overextended/oxmysql)
+- [ox_lib](https://github.com/CommunityOx/ox_lib)
+- [oxmysql](https://github.com/CommunityOx/oxmysql)
 
 ## Install
 
