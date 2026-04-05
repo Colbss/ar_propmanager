@@ -20,7 +20,7 @@ export interface GizmoKeys {
 export const useGizmoStore = defineStore('gizmo', () => {
   const isVisible = ref<boolean>(false)
   const editorMode = ref<EditorMode>('translate')
-  const spaceMode = ref<SpaceMode>('world')
+  const spaceMode = ref<SpaceMode>('local')
   const keys = ref<GizmoKeys>({
     mode:   { key: 'R',    description: 'Change Mode' },
     focus:  { key: 'F',    description: 'Toggle Focus' },

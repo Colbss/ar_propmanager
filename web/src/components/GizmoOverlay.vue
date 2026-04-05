@@ -91,96 +91,99 @@ async function pasteVec(target: Vec3Fields, fmt: (n: number) => string) {
 
 <template>
   <Transition name="fade">
-    <div v-if="gizmoStore.isVisible" class="pointer-events-none absolute inset-0 z-10">
+    <div v-if="gizmoStore.isVisible" class="pointer-events-none absolute inset-0 z-10 flex justify-center">
+      <div class="relative w-full max-w-[200vh]">
 
-      <!-- ── Top left: Transform ────────────────────────────────────────── -->
-      <div class="pointer-events-auto absolute left-4 top-4 w-52 rounded-lg border border-white/10 bg-black/75 p-3 text-white ">
+      <!-- ── Left middle: Transform + Controls ─────────────────────────── -->
+      <div class="pointer-events-auto absolute left-8 top-1/2 flex w-52 -translate-y-1/2 flex-col gap-3 rounded-lg border border-white/10 bg-black/75 p-3 text-white">
 
         <!-- Position -->
-        <div class="mb-1 flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Position</span>
-          <div class="flex gap-1">
-            <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="copyVec(localPos)"><i class="pi pi-copy text-xs" /></button>
-            <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="pasteVec(localPos, (n) => n.toFixed(1))"><i class="pi pi-clipboard text-xs" /></button>
+        <div>
+          <div class="mb-1 flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Position</span>
+            <div class="flex gap-1">
+              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="copyVec(localPos)"><i class="pi pi-copy text-xs" /></button>
+              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="pasteVec(localPos, (n) => n.toFixed(1))"><i class="pi pi-clipboard text-xs" /></button>
+            </div>
           </div>
-        </div>
-        <div class="mb-3 flex flex-col gap-1">
-          <div v-for="axis in (['x', 'y', 'z'] as const)" :key="'p' + axis" class="flex items-center gap-1.5">
-            <span :class="{ 'text-red-400': axis === 'x', 'text-green-400': axis === 'y', 'text-blue-400': axis === 'z' }" class="w-3 text-center text-xs font-bold uppercase">{{ axis }}</span>
-            <input
-              v-model="localPos[axis]"
-              type="text"
-              class="min-w-0 flex-1 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-xs text-slate-100 outline-none transition focus:border-white/30 focus:bg-white/10"
-              @focus="onFocus(editingPos, axis)"
-              @blur="onBlur(editingPos, axis)"
-              @keydown.enter="onEnter($event.target)"
-              @keydown.escape="onEscape($event.target, editingPos, axis, localPos, gizmoStore.displayPosition[axis], (n) => n.toFixed(1))"
-            />
+          <div class="flex flex-col gap-1">
+            <div v-for="axis in (['x', 'y', 'z'] as const)" :key="'p' + axis" class="flex items-center gap-1.5">
+              <span :class="{ 'text-red-400': axis === 'x', 'text-green-400': axis === 'y', 'text-blue-400': axis === 'z' }" class="w-3 text-center text-xs font-bold uppercase">{{ axis }}</span>
+              <input
+                v-model="localPos[axis]"
+                type="text"
+                class="min-w-0 flex-1 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-xs text-slate-100 outline-none transition focus:border-white/30 focus:bg-white/10"
+                @focus="onFocus(editingPos, axis)"
+                @blur="onBlur(editingPos, axis)"
+                @keydown.enter="onEnter($event.target)"
+                @keydown.escape="onEscape($event.target, editingPos, axis, localPos, gizmoStore.displayPosition[axis], (n) => n.toFixed(1))"
+              />
+            </div>
           </div>
         </div>
 
         <!-- Rotation -->
-        <div class="mb-1 flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Rotation</span>
-          <div class="flex gap-1">
-            <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="copyVec(localRot)"><i class="pi pi-copy text-xs" /></button>
-            <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="pasteVec(localRot, (n) => Math.round(n).toString())"><i class="pi pi-clipboard text-xs" /></button>
+        <div>
+          <div class="mb-1 flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Rotation</span>
+            <div class="flex gap-1">
+              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="copyVec(localRot)"><i class="pi pi-copy text-xs" /></button>
+              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="pasteVec(localRot, (n) => Math.round(n).toString())"><i class="pi pi-clipboard text-xs" /></button>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1">
+            <div v-for="axis in (['x', 'y', 'z'] as const)" :key="'r' + axis" class="flex items-center gap-1.5">
+              <span :class="{ 'text-red-400': axis === 'x', 'text-green-400': axis === 'y', 'text-blue-400': axis === 'z' }" class="w-3 text-center text-xs font-bold uppercase">{{ axis }}</span>
+              <input
+                v-model="localRot[axis]"
+                type="text"
+                class="min-w-0 flex-1 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-xs text-slate-100 outline-none transition focus:border-white/30 focus:bg-white/10"
+                @focus="onFocus(editingRot, axis)"
+                @blur="onBlur(editingRot, axis)"
+                @keydown.enter="onEnter($event.target)"
+                @keydown.escape="onEscape($event.target, editingRot, axis, localRot, gizmoStore.displayRotation[axis], (n) => Math.round(n).toString())"
+              />
+            </div>
           </div>
         </div>
+
+        <div class="h-px bg-white/10" />
+
+        <!-- Mode + Space indicators -->
+        <div class="flex gap-2">
+          <div class="flex flex-1 flex-col items-center rounded bg-white/5 px-2 py-1.5">
+            <span class="text-[0.6rem] uppercase tracking-wider text-slate-500">Mode</span>
+            <span class="text-xs font-medium capitalize text-slate-200">{{ gizmoStore.editorMode }}</span>
+          </div>
+          <div class="flex flex-1 flex-col items-center rounded bg-white/5 px-2 py-1.5">
+            <span class="text-[0.6rem] uppercase tracking-wider text-slate-500">Space</span>
+            <span class="text-xs font-medium capitalize text-slate-200">{{ gizmoStore.spaceMode }}</span>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
         <div class="flex flex-col gap-1">
-          <div v-for="axis in (['x', 'y', 'z'] as const)" :key="'r' + axis" class="flex items-center gap-1.5">
-            <span :class="{ 'text-red-400': axis === 'x', 'text-green-400': axis === 'y', 'text-blue-400': axis === 'z' }" class="w-3 text-center text-xs font-bold uppercase">{{ axis }}</span>
-            <input
-              v-model="localRot[axis]"
-              type="text"
-              class="min-w-0 flex-1 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-xs text-slate-100 outline-none transition focus:border-white/30 focus:bg-white/10"
-              @focus="onFocus(editingRot, axis)"
-              @blur="onBlur(editingRot, axis)"
-              @keydown.enter="onEnter($event.target)"
-              @keydown.escape="onEscape($event.target, editingRot, axis, localRot, gizmoStore.displayRotation[axis], (n) => Math.round(n).toString())"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Top right: Controls ──────────────────────────────────────────── -->
-      <div class="pointer-events-auto absolute right-4 top-4 flex w-44 flex-col gap-1.5 rounded-lg border border-white/10 bg-black/75 p-3 ">
-        <div class="flex gap-2 text-xs">
-          <fieldset class="flex-1 rounded border border-white/20 px-2 py-1">
-            <legend class="px-1 text-slate-400">Mode</legend>
-            <span class="capitalize text-slate-100">{{ gizmoStore.editorMode }}</span>
-          </fieldset>
-          <fieldset class="flex-1 rounded border border-white/20 px-2 py-1">
-            <legend class="px-1 text-slate-400">Space</legend>
-            <span class="capitalize text-slate-100">{{ gizmoStore.spaceMode }}</span>
-          </fieldset>
+          <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="gizmoStore.toggleSpaceMode()">Toggle Axis Space</button>
+          <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="gizmoStore.snapToGround()">Snap To Ground</button>
+          <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="gizmoStore.resetRotation()">Reset Rotation</button>
         </div>
 
         <div class="h-px bg-white/10" />
 
-        <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="gizmoStore.toggleSpaceMode()">Toggle Axis Space</button>
-
-        <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="gizmoStore.snapToGround()">Snap To Ground</button>
-        <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="gizmoStore.resetRotation()">Reset Rotation</button>
-
-        <div class="h-px bg-white/10" />
-
-        <button class="rounded bg-blue-600/80 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500/80" @click="gizmoStore.finish()">Done</button>
-        <button class="rounded bg-red-600/80 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-500/80" @click="gizmoStore.cancel()">Cancel</button>
-      </div>
-
-      <!-- ── Bottom center: Keybinds ─────────────────────────────────────── -->
-      <div class="pointer-events-none absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-3">
-        <div
-          v-for="bind in [gizmoStore.keys.mode, gizmoStore.keys.focus, gizmoStore.keys.finish, gizmoStore.keys.cancel]"
-          :key="bind.key"
-          class="flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/75 px-3 py-2 "
-        >
-          <kbd class="rounded bg-white/15 px-1.5 py-0.5 font-mono text-xs text-slate-100">{{ bind.key }}</kbd>
-          <span class="text-xs text-slate-400">{{ bind.description }}</span>
+        <!-- Keybinds -->
+        <div class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 px-3">
+          <template
+            v-for="bind in [gizmoStore.keys.mode, gizmoStore.keys.focus, gizmoStore.keys.finish, gizmoStore.keys.cancel]"
+            :key="bind.key"
+          >
+            <kbd class="justify-self-center rounded bg-white/15 px-1.5 py-0.5 font-mono text-xs text-slate-100">{{ bind.key }}</kbd>
+            <span class="justify-self-center text-xs text-slate-400">{{ bind.description }}</span>
+          </template>
         </div>
+
       </div>
 
+      </div>
     </div>
   </Transition>
 </template>
