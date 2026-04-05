@@ -97,6 +97,17 @@ local gizmoOnCancel      = nil
 
 -- ─── Gizmo ────────────────────────────────────────────────────────────────────
 
+local disabledControls = {
+    23,     -- Enter
+    25,     -- Aim
+    44,     -- Cover
+    140,    -- MeleeAttackLight
+    141,    -- MeleeAttackHeavy
+    142,    -- MeleeAttackAlternate
+    143,    -- MeleeAttack
+    263     -- MeleeAttackAlt
+}
+
 --- Toggle NUI focus for the gizmo, optionally overriding the current state.
 --- @param override boolean|nil  true = focused, false = unfocused, nil = toggle
 function ToggleFocus(override)
@@ -107,6 +118,11 @@ function ToggleFocus(override)
     end
     SetNuiFocus(hasFocus, hasFocus)
     SetNuiFocusKeepInput(hasFocus)
+    if hasFocus then
+        lib.disableControls:Add({1,2})
+    else
+        lib.disableControls:Remove({1,2})
+    end
 end
 
 --- Open the gizmo for the given entity.
@@ -115,7 +131,16 @@ end
 --- @param onFinish function|nil  Called with (position, quaternion) when the player confirms
 --- @param onCancel function|nil  Called with no args when the player cancels
 function OpenGizmo(entity, options, onFinish, onCancel)
-    assert(DoesEntityExist(entity), 'ar_propmanager: entity does not exist')
+    
+    if not DoesEntityExist(entity) then
+        lib.notify({
+            description = locale('gizmo_invalid_entity'),
+            type = 'error'
+        })
+        onCancel()
+        return
+    end
+
     options = options or {}
 
     currentGizmoEntity = entity
@@ -143,21 +168,19 @@ function OpenGizmo(entity, options, onFinish, onCancel)
 
     gizmoActive = true
 
+    if cache.vehicle then
+        lib.notify({
+            description = locale('gizmo_vehicle_warning'),
+            type = 'error'
+        })
+        CloseGizmo(false)
+        return
+    end
+
     CreateThread(function()
+        lib.disableControls:Add(disabledControls)
         while gizmoActive do
-            if hasFocus then
-                DisableControlAction(0, 1, true)   -- INPUT_LOOK_LR
-                DisableControlAction(0, 2, true)   -- INPUT_LOOK_UD
-            end
-
-            DisablePlayerFiring(PlayerId(), true)
-            DisableControlAction(0, 25, true)  -- Aim
-            DisableControlAction(0, 140, true) -- MeleeAttackLight
-            DisableControlAction(0, 141, true) -- MeleeAttackHeavy
-            DisableControlAction(0, 142, true) -- MeleeAttackAlternate
-            DisableControlAction(0, 143, true) -- MeleeAttack
-            DisableControlAction(0, 263, true) -- MeleeAttackAlt
-
+            lib.disableControls()
             local camPos = GetGameplayCamCoords()
             local camRot = GetGameplayCamRot(2)
             SendNUIMessage({
@@ -170,6 +193,7 @@ function OpenGizmo(entity, options, onFinish, onCancel)
             })
             Wait(0)
         end
+        lib.disableControls:Remove(disabledControls)
     end)
 end
 
@@ -208,12 +232,23 @@ function CloseGizmo(save)
             end
         end
     else
+        print('Entity: ', entity)
         if entity and DoesEntityExist(entity) then
             DeleteEntity(entity)
         end
         if onCancel then onCancel() end
     end
 end
+
+lib.onCache('vehicle', function(value)
+    if value then
+        CloseGizmo(false)
+        lib.notify({
+            description = locale('gizmo_vehicle_warning'),
+            type = 'error'
+        })
+    end
+end)
 
 -- ─── Gizmo NUI callbacks ──────────────────────────────────────────────────────
 

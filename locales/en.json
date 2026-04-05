@@ -4,6 +4,9 @@
     "keybind_finish": "Finish",
     "keybind_cancel": "Cancel",
 
+    "gizmo_vehicle_warning": "Gizmo cannot be used while in a vehicle",
+    "gizmo_invalid_entity": "Entit does not exist",
+
     "logs_new_prop_title": "Prop Placed",
     "logs_new_prop_description": "A new prop was placed",
     "logs_update_prop_title": "Prop Updated",
