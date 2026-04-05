@@ -74,6 +74,8 @@ RegisterNUICallback('PlaceProp', function(data, cb)
             expiresAt      = propMeta.expiresAt,
         })
         if DoesEntityExist(prop) then DeleteEntity(prop) end
+    end, function(entity)
+        if DoesEntityExist(entity) then DeleteEntity(entity) end
     end)
 
     cb('ok')
@@ -109,6 +111,9 @@ RegisterNUICallback('EditProp', function(data, cb)
             expiresAt      = prop.expiresAt,
         }
 
+        local origPos             = GetEntityCoords(entity)
+        local oqx, oqy, oqz, oqw = GetEntityQuaternion(entity)
+
         ClosePropManager()
         OpenGizmo(entity, {}, function(position, quaternion)
             TriggerServerEvent('ar_propmanager:saveProp', {
@@ -120,6 +125,12 @@ RegisterNUICallback('EditProp', function(data, cb)
                 renderDistance = propMeta.renderDistance,
                 expiresAt      = propMeta.expiresAt,
             })
+        end, function(e)
+            if DoesEntityExist(e) then
+                SetEntityCoords(e, origPos.x, origPos.y, origPos.z, false, false, false, false)
+                SetEntityQuaternion(e, oqx, oqy, oqz, oqw)
+                FreezeEntityPosition(e, true)
+            end
         end)
 
         cb('ok')

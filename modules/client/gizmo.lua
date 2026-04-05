@@ -232,11 +232,7 @@ function CloseGizmo(save)
             end
         end
     else
-        print('Entity: ', entity)
-        if entity and DoesEntityExist(entity) then
-            DeleteEntity(entity)
-        end
-        if onCancel then onCancel() end
+        if onCancel then onCancel(entity) end
     end
 end
 
