@@ -13,7 +13,7 @@ Preview available on [streamable](https://streamable.com/t8yx3k)
 - Live updated searchable list of props (credit [DurtyFree](https://github.com/DurtyFree/gta-v-data-dumps/blob/master/ObjectList.ini))
 - 3D gizmo for precise translate and rotate manipulation
 - Manual coordinate input - type exact X/Y/Z position and rotation values directly in the gizmo overlay
-- Copy and paste coordinate vectors to/from the clipboard
+- Copy and paste position / rotation vectors (resource restricted)
 
 ### Prop management
 - Edit existing props
