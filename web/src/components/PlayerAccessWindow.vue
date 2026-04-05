@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { usePlayerAccessStore, type PlayerAccessEntry, type Zone, type OnlinePlayer } from '../stores/playeraccess.store'
+import { useLocaleStore } from '../stores/locale.store'
 import MapZonePicker from './MapZonePicker.vue'
 import MapAreaViewer from './MapAreaViewer.vue'
 
 const props = defineProps<{ level: number }>()
 
 const store = usePlayerAccessStore()
+const localeStore = useLocaleStore()
+const { locales: l } = storeToRefs(localeStore)
+const { t } = localeStore
 
 // ─── Restricted view (level 0) ────────────────────────────────────────────────
 
@@ -149,17 +154,17 @@ const requestDelete = (id: number) => {
   <div v-if="props.level === 0" class="flex min-h-[50vh] flex-col">
     <div class="flex items-center gap-2 border-b border-white/10 px-4 py-2.5">
       <i class="pi pi-lock text-amber-400 text-xs" />
-      <span class="text-xs font-semibold text-amber-300">Restricted Access</span>
+      <span class="text-xs font-semibold text-amber-300">{{ l.ui_restricted_access }}</span>
     </div>
 
     <div v-if="myEntry" class="flex flex-col gap-3 p-4">
       <p class="text-xs text-slate-400">
-        You have been granted access to manage props within the following areas.
+        {{ l.ui_restricted_desc }}
       </p>
 
       <!-- Groups -->
       <div class="flex flex-col gap-1">
-        <span class="text-xs text-slate-500">Accessible Groups</span>
+        <span class="text-xs text-slate-500">{{ l.ui_accessible_groups }}</span>
         <div class="flex flex-wrap gap-1">
           <span
             v-for="g in myEntry.groups"
@@ -173,20 +178,20 @@ const requestDelete = (id: number) => {
 
       <!-- Forced expiry -->
       <div v-if="myEntry.maxExpiry" class="flex flex-col gap-1">
-        <span class="text-xs text-slate-500">Forced Expiry</span>
-        <span class="text-xs text-amber-300">Props you place will expire after {{ formatExpiry(myEntry.maxExpiry) }}.</span>
+        <span class="text-xs text-slate-500">{{ l.ui_forced_expiry }}</span>
+        <span class="text-xs text-amber-300">{{ t('ui_forced_expiry_player_desc', formatExpiry(myEntry.maxExpiry)) }}</span>
       </div>
 
       <!-- Zones -->
       <div class="flex flex-col gap-1">
-        <span class="text-xs text-slate-500">Zone Restrictions</span>
-        <div v-if="!myEntry.zones.length" class="text-xs text-slate-400">No zone restriction - full map access.</div>
+        <span class="text-xs text-slate-500">{{ l.ui_zone_restrictions }}</span>
+        <div v-if="!myEntry.zones.length" class="text-xs text-slate-400">{{ l.ui_no_zone_restriction }}</div>
         <MapAreaViewer v-else :zones="myEntry.zones" height="35vh" />
       </div>
     </div>
 
     <div v-else class="py-8 text-center text-xs text-slate-500">
-      No access entry found.
+      {{ l.ui_no_access_entry }}
     </div>
   </div>
 
@@ -194,25 +199,25 @@ const requestDelete = (id: number) => {
   <div v-else class="flex min-h-[50vh] flex-col" @mousedown="pendingDelete = null">
     <!-- Toolbar -->
     <div class="flex items-center justify-between border-b border-white/10 px-4 py-2">
-      <span class="text-xs text-slate-500">{{ store.entries.length }} player{{ store.entries.length !== 1 ? 's' : '' }} with access</span>
+      <span class="text-xs text-slate-500">{{ store.entries.length }} {{ store.entries.length !== 1 ? l.ui_players : l.ui_player }} {{ l.ui_with_access }}</span>
       <button
         class="flex items-center gap-1.5 rounded bg-white/10 px-2.5 py-1 text-xs text-slate-300 transition hover:bg-white/20"
         @click.stop="openAdd"
       >
         <i class="pi pi-plus text-[0.7rem]" />
-        Grant Access
+        {{ l.ui_grant_access }}
       </button>
     </div>
 
     <!-- Add / Edit form -->
     <Transition name="form-slide">
       <div v-if="showForm" class="border-b border-white/10 bg-white/5 p-4">
-        <div class="mb-3 text-xs font-semibold text-slate-300">{{ editingId ? 'Edit Access Entry' : 'Grant Player Access' }}</div>
+        <div class="mb-3 text-xs font-semibold text-slate-300">{{ editingId ? l.ui_edit_access_entry : l.ui_grant_player_access }}</div>
 
         <div class="mb-2 flex flex-col gap-2">
           <!-- Player selector (new entry) -->
           <div v-if="!editingId" class="flex flex-col gap-1">
-            <label class="text-xs text-slate-400">Player</label>
+            <label class="text-xs text-slate-400">{{ l.ui_player_label }}</label>
             <!-- Selected player chip -->
             <div
               v-if="form.name && form.identifier"
@@ -235,13 +240,13 @@ const requestDelete = (id: number) => {
               <input
                 v-model="playerSearch"
                 type="text"
-                placeholder="Search online players…"
+                :placeholder="l.ui_search_players_placeholder"
                 class="rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-white/25 focus:bg-white/10"
               />
               <div class="flex max-h-32 flex-col overflow-y-auto rounded border border-white/10 bg-black/40">
-                <div v-if="store.loadingPlayers" class="py-3 text-center text-xs text-slate-500">Loading…</div>
+                <div v-if="store.loadingPlayers" class="py-3 text-center text-xs text-slate-500">{{ l.ui_loading }}</div>
                 <div v-else-if="filteredPlayers.length === 0" class="py-3 text-center text-xs text-slate-500">
-                  {{ playerSearch ? 'No players found' : 'No players online' }}
+                  {{ playerSearch ? l.ui_no_players_found : l.ui_no_players_online }}
                 </div>
                 <button
                   v-for="p in filteredPlayers"
@@ -259,7 +264,7 @@ const requestDelete = (id: number) => {
 
           <!-- Readonly player info (edit entry) -->
           <div v-else class="flex flex-col gap-1">
-            <label class="text-xs text-slate-400">Player</label>
+            <label class="text-xs text-slate-400">{{ l.ui_player_label }}</label>
             <div class="rounded border border-white/10 bg-white/5 px-2.5 py-1.5">
               <span class="text-xs font-medium text-slate-100">{{ form.name }}</span>
               <div class="mt-0.5 truncate select-all font-mono text-[0.65rem] text-slate-500">{{ form.identifier }}</div>
@@ -269,7 +274,7 @@ const requestDelete = (id: number) => {
           <!-- Groups -->
           <div class="flex flex-col gap-1">
             <label class="text-xs text-slate-400">
-              Default Groups
+              {{ l.ui_default_groups }}
               <span v-if="form.groups.length" class="ml-1 text-slate-500">({{ form.groups.length }} selected)</span>
             </label>
             <div class="flex flex-wrap gap-1">
@@ -291,9 +296,9 @@ const requestDelete = (id: number) => {
 
         <!-- Zone restrictions -->
         <div class="mb-1 flex items-center justify-between">
-          <label class="text-xs text-slate-400">Zone Restrictions</label>
+          <label class="text-xs text-slate-400">{{ l.ui_zone_restrictions }}</label>
           <span v-if="form.zones.length" class="text-[0.7rem] text-slate-500">
-            {{ form.zones.length }} zone{{ form.zones.length !== 1 ? 's' : '' }} saved
+            {{ form.zones.length }} {{ form.zones.length !== 1 ? l.ui_zones : l.ui_zone }} {{ l.ui_saved }}
           </span>
         </div>
         <div class="rounded border border-white/10 bg-white/5 p-3">
@@ -309,16 +314,16 @@ const requestDelete = (id: number) => {
             @click.stop="addDraftZone"
           >
             <i class="pi pi-plus mr-1 text-[0.7rem]" />
-            Add Zone
+            {{ l.ui_add_zone }}
           </button>
           <p class="mt-1.5 text-[0.7rem] text-slate-500">
-            {{ form.zones.length ? `Player is restricted to ${form.zones.length} zone${form.zones.length !== 1 ? 's' : ''}.` : 'No zones added - player has access to the full map.' }}
+            {{ form.zones.length ? t('ui_player_restricted_zones', form.zones.length + ' ' + (form.zones.length !== 1 ? l.ui_zones : l.ui_zone)) : l.ui_no_zones_added }}
           </p>
         </div>
 
         <!-- Forced expiry -->
         <div class="mt-3">
-          <label class="mb-1 block text-xs text-slate-400">Force Expiry</label>
+          <label class="mb-1 block text-xs text-slate-400">{{ l.ui_force_expiry }}</label>
           <div class="flex flex-wrap gap-1">
             <button
               v-for="preset in EXPIRY_PRESETS"
@@ -332,7 +337,7 @@ const requestDelete = (id: number) => {
             >{{ preset.label }}</button>
           </div>
           <p v-if="form.maxExpiry" class="mt-1 text-[0.7rem] text-slate-500">
-            Props placed by this player will expire after {{ formatExpiry(form.maxExpiry) }}.
+            {{ t('ui_player_expiry_desc', formatExpiry(form.maxExpiry)) }}
           </p>
         </div>
 
@@ -340,21 +345,21 @@ const requestDelete = (id: number) => {
         <div class="mt-3 flex flex-col gap-2">
           <p v-if="isDuplicate" class="text-[0.7rem] text-red-400">
             <i class="pi pi-exclamation-circle mr-1 text-[0.65rem]" />
-            This player already has an access entry. Edit their existing entry instead.
+            {{ l.ui_duplicate_entry }}
           </p>
           <div class="flex justify-end gap-2">
             <button
               class="rounded bg-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/20"
               @click="cancelForm"
             >
-              Cancel
+              {{ l.ui_cancel }}
             </button>
             <button
               class="rounded bg-blue-600/80 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-500/80 disabled:opacity-40"
               :disabled="!form.name.trim() || !form.identifier.trim() || form.groups.length === 0 || isDuplicate"
               @click="submitForm"
             >
-              {{ editingId ? 'Save Changes' : 'Grant Access' }}
+              {{ editingId ? l.ui_save_changes : l.ui_grant_access }}
             </button>
           </div>
         </div>
@@ -364,7 +369,7 @@ const requestDelete = (id: number) => {
     <!-- Access list -->
     <div v-if="!showForm" class="max-h-[40vh] overflow-y-auto">
       <div v-if="store.entries.length === 0" class="py-8 text-center text-xs text-slate-500">
-        No players have been granted access.
+        {{ l.ui_no_players_access }}
       </div>
 
       <div
@@ -375,15 +380,14 @@ const requestDelete = (id: number) => {
         <!-- Name + identifier -->
         <div class="flex min-w-0 flex-1 flex-col gap-0.5">
           <span class="truncate font-medium text-slate-100">{{ entry.name }}</span>
-          <span class="truncate font-mono text-xs text-slate-500" :title="entry.identifier">{{ entry.identifier }}</span>
+          <span class="truncate font-mono text-xs text-slate-500">{{ entry.identifier }}</span>
         </div>
 
         <!-- Group count -->
         <span
           class="shrink-0 rounded bg-white/10 px-2 py-0.5 text-xs text-slate-300"
-          :title="entry.groups.join(', ')"
         >
-          {{ entry.groups.length }} group{{ entry.groups.length !== 1 ? 's' : '' }}
+          {{ entry.groups.length }} {{ entry.groups.length !== 1 ? l.ui_groups : l.ui_group }}
         </span>
 
         <!-- Zone count badge -->
@@ -391,14 +395,13 @@ const requestDelete = (id: number) => {
           class="shrink-0 rounded px-2 py-0.5 text-xs"
           :class="entry.zones.length ? 'bg-blue-500/15 text-blue-400' : 'bg-white/5 text-slate-500'"
         >
-          {{ entry.zones.length ? `${entry.zones.length} zone${entry.zones.length !== 1 ? 's' : ''}` : 'Full Map' }}
+          {{ entry.zones.length ? `${entry.zones.length} ${entry.zones.length !== 1 ? l.ui_zones : l.ui_zone}` : l.ui_full_map }}
         </span>
 
         <!-- Expiry badge -->
         <span
           v-if="entry.maxExpiry"
           class="shrink-0 rounded bg-amber-500/15 px-2 py-0.5 text-xs text-amber-400"
-          :title="`Props expire after ${formatExpiry(entry.maxExpiry)}`"
         >
           <i class="pi pi-clock mr-0.5 text-[0.6rem]" />{{ formatExpiry(entry.maxExpiry) }}
         </span>
@@ -407,7 +410,6 @@ const requestDelete = (id: number) => {
         <div class="flex shrink-0 gap-1">
           <button
             class="rounded px-2 py-1 text-slate-400 transition hover:bg-white/10 hover:text-slate-100"
-            title="Edit"
             @click.stop="openEdit(entry)"
           >
             <i class="pi pi-pencil text-xs" />
@@ -415,7 +417,6 @@ const requestDelete = (id: number) => {
           <button
             class="rounded px-2 py-1 transition hover:bg-white/10"
             :class="pendingDelete === entry.id ? 'text-red-400' : 'text-slate-400 hover:text-slate-100'"
-            :title="pendingDelete === entry.id ? 'Click again to confirm' : 'Revoke access'"
             @click.stop="requestDelete(entry.id)"
           >
             <i class="pi text-xs" :class="pendingDelete === entry.id ? 'pi-exclamation-triangle' : 'pi-trash'" />

@@ -1,8 +1,18 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { reactive, computed, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useGizmoStore } from '../stores/gizmo.store'
+import { useLocaleStore } from '../stores/locale.store'
 
 const gizmoStore = useGizmoStore()
+const { locales: l } = storeToRefs(useLocaleStore())
+
+const keybindDisplay = computed(() => [
+  { key: l.value.ui_keybind_mode_key,   desc: l.value.ui_keybind_mode   },
+  { key: l.value.ui_keybind_focus_key,  desc: l.value.ui_keybind_focus  },
+  { key: l.value.ui_keybind_finish_key, desc: l.value.ui_keybind_finish },
+  { key: l.value.ui_keybind_cancel_key, desc: l.value.ui_keybind_cancel },
+])
 
 // ─── Local editable state ─────────────────────────────────────────────────────
 
@@ -106,10 +116,10 @@ function pasteVec(target: Vec3Fields, fmt: (n: number) => string, type: 'pos' | 
         <!-- Position -->
         <div>
           <div class="mb-1 flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Position</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ l.ui_gizmo_position }}</span>
             <div class="flex gap-1">
-              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" title="Copy position" @click="copyVec(localPos, 'pos')"><i class="pi pi-copy text-xs" /></button>
-              <button class="rounded p-0.5 transition hover:text-slate-200" :class="posBuffer ? 'text-slate-400' : 'text-slate-600'" tabindex="-1" title="Paste position" @click="pasteVec(localPos, (n) => n.toFixed(1), 'pos')"><i class="pi pi-file-import text-xs" /></button>
+              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="copyVec(localPos, 'pos')"><i class="pi pi-copy text-xs" /></button>
+              <button class="rounded p-0.5 transition hover:text-slate-200" :class="posBuffer ? 'text-slate-400' : 'text-slate-600'" tabindex="-1" @click="pasteVec(localPos, (n) => n.toFixed(1), 'pos')"><i class="pi pi-file-import text-xs" /></button>
             </div>
           </div>
           <div class="flex flex-col gap-1">
@@ -131,10 +141,10 @@ function pasteVec(target: Vec3Fields, fmt: (n: number) => string, type: 'pos' | 
         <!-- Rotation -->
         <div>
           <div class="mb-1 flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Rotation</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ l.ui_gizmo_rotation }}</span>
             <div class="flex gap-1">
-              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" title="Copy rotation" @click="copyVec(localRot, 'rot')"><i class="pi pi-copy text-xs" /></button>
-              <button class="rounded p-0.5 transition hover:text-slate-200" :class="rotBuffer ? 'text-slate-400' : 'text-slate-600'" tabindex="-1" title="Paste rotation" @click="pasteVec(localRot, (n) => Math.round(n).toString(), 'rot')"><i class="pi pi-file-import text-xs" /></button>
+              <button class="rounded p-0.5 text-slate-500 transition hover:text-slate-200" tabindex="-1" @click="copyVec(localRot, 'rot')"><i class="pi pi-copy text-xs" /></button>
+              <button class="rounded p-0.5 transition hover:text-slate-200" :class="rotBuffer ? 'text-slate-400' : 'text-slate-600'" tabindex="-1" @click="pasteVec(localRot, (n) => Math.round(n).toString(), 'rot')"><i class="pi pi-file-import text-xs" /></button>
             </div>
           </div>
           <div class="flex flex-col gap-1">
@@ -158,20 +168,20 @@ function pasteVec(target: Vec3Fields, fmt: (n: number) => string, type: 'pos' | 
         <!-- Mode + Space indicators -->
         <div class="flex gap-2">
           <div class="flex flex-1 flex-col items-center rounded bg-white/5 px-2 py-1.5">
-            <span class="text-[0.6rem] uppercase tracking-wider text-slate-500">Mode</span>
+            <span class="text-[0.6rem] uppercase tracking-wider text-slate-500">{{ l.ui_gizmo_mode }}</span>
             <span class="text-xs font-medium capitalize text-slate-200">{{ gizmoStore.editorMode }}</span>
           </div>
           <div class="flex flex-1 flex-col items-center rounded bg-white/5 px-2 py-1.5">
-            <span class="text-[0.6rem] uppercase tracking-wider text-slate-500">Space</span>
+            <span class="text-[0.6rem] uppercase tracking-wider text-slate-500">{{ l.ui_gizmo_space }}</span>
             <span class="text-xs font-medium capitalize text-slate-200">{{ gizmoStore.spaceMode }}</span>
           </div>
         </div>
 
         <!-- Action buttons -->
         <div class="flex flex-col gap-1">
-          <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="gizmoStore.toggleSpaceMode()">Toggle Axis Space</button>
-          <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="gizmoStore.snapToGround()">Snap To Ground</button>
-          <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="gizmoStore.resetRotation()">Reset Rotation</button>
+          <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="gizmoStore.toggleSpaceMode()">{{ l.ui_gizmo_toggle_space }}</button>
+          <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="gizmoStore.snapToGround()">{{ l.ui_gizmo_snap_ground }}</button>
+          <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="gizmoStore.resetRotation()">{{ l.ui_gizmo_reset_rotation }}</button>
         </div>
 
         <div class="h-px bg-white/10" />
@@ -179,11 +189,11 @@ function pasteVec(target: Vec3Fields, fmt: (n: number) => string, type: 'pos' | 
         <!-- Keybinds -->
         <div class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 px-2">
           <template
-            v-for="bind in [gizmoStore.keys.mode, gizmoStore.keys.focus, gizmoStore.keys.finish, gizmoStore.keys.cancel]"
+            v-for="bind in keybindDisplay"
             :key="bind.key"
           >
             <kbd class="self-center justify-self-center rounded bg-white/15 px-1.5 py-0.5 font-mono text-xs text-slate-100">{{ bind.key }}</kbd>
-            <span class="justify-self-center text-center text-xs text-slate-400">{{ bind.description }}</span>
+            <span class="justify-self-center text-center text-xs text-slate-400">{{ bind.desc }}</span>
           </template>
         </div>
 

@@ -6,10 +6,12 @@ import { useApi } from '../composables/useApi'
 import { usePropManagerStore, type PropEntry } from '../stores/propmanager.store'
 import { usePlayerAccessStore, type PlayerAccessEntry } from '../stores/playeraccess.store'
 import { useAddPropStore } from '../stores/addprop.store'
+import { useLocaleStore, type UILocales } from '../stores/locale.store'
 
 const propStore = usePropManagerStore()
 const accessStore = usePlayerAccessStore()
 const addPropStore = useAddPropStore()
+const localeStore = useLocaleStore()
 
 const windowVisible = ref(false)
 const activeTab = ref<'props' | 'add-prop' | 'map' | 'permissions'>('props')
@@ -21,6 +23,7 @@ interface OpenPropManagerPayload {
   groupStates: Record<string, boolean>
   playerAccess?: PlayerAccessEntry[]
   groups?: string[]
+  locales?: UILocales
 }
 
 function applyPayload(data: OpenPropManagerPayload) {
@@ -32,6 +35,7 @@ function applyPayload(data: OpenPropManagerPayload) {
   if (data.groups) accessStore.availableGroups = data.groups
   addPropStore.allowedGroups = data.level === 0 ? (data.playerAccess?.[0]?.groups ?? []) : []
   addPropStore.maxExpiry     = data.level === 0 ? (data.playerAccess?.[0]?.maxExpiry ?? null) : null
+  if (data.locales) localeStore.setLocales(data.locales)
 }
 
 useNuiEvent<OpenPropManagerPayload>('openPropManager', (data) => {

@@ -5,8 +5,10 @@ import { TresCanvas } from '@tresjs/core'
 import { TransformControls } from '@tresjs/cientos'
 import { useNuiEvent } from '../composables/useNuiEvent'
 import { useGizmoStore } from '../stores/gizmo.store'
+import { useLocaleStore, type UILocales } from '../stores/locale.store'
 
 const gizmoStore = useGizmoStore()
+const localeStore = useLocaleStore()
 
 const cameraRef = shallowRef<THREE.PerspectiveCamera | null>(null)
 const meshRef = shallowRef<THREE.Mesh | null>(null)
@@ -48,11 +50,13 @@ useNuiEvent<{
   quaternion: { x: number; y: number; z: number; w: number }
   keybinds?: { mode: { key: string; description: string }; focus: { key: string; description: string }; finish: { key: string; description: string }; cancel: { key: string; description: string } }
   restrictRotationAxes?: boolean
+  locales?: UILocales
 }>('initGizmo', (entity) => {
   const mesh = meshRef.value
   if (!mesh) return
 
   if (entity.keybinds) gizmoStore.keys = entity.keybinds
+  if (entity.locales)  localeStore.setLocales(entity.locales)
   gizmoStore.restrictRotationAxes = entity.restrictRotationAxes ?? false
 
   mesh.position.set(entity.position.x, entity.position.z, -entity.position.y)

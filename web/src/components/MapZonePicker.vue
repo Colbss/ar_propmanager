@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted, nextTick } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useLocaleStore } from '../stores/locale.store'
 import type { Map as LeafletMap, CircleMarker, Polygon } from 'leaflet'
 import type { Zone } from '../stores/playeraccess.store'
 
@@ -45,6 +47,10 @@ let map: LeafletMap | null = null
 let markers: CircleMarker[] = []
 let draftPolygon: Polygon | null = null
 let savedPolygons: Polygon[] = []
+
+const localeStore = useLocaleStore()
+const { locales: l } = storeToRefs(localeStore)
+const { t } = localeStore
 
 // Internal copy - synced to modelValue on mount, then emitted on every change
 const points = ref<Array<{ x: number; y: number }>>([...props.modelValue])
@@ -232,7 +238,7 @@ onUnmounted(() => {
           X {{ hoverCoords.x.toFixed(0) }}&nbsp;&nbsp;Y {{ hoverCoords.y.toFixed(0) }}
         </template>
         <template v-else>
-          Click map to place vertices · Hover a saved zone to remove it
+          {{ l.ui_zone_map_hint }}
         </template>
       </span>
     </div>
@@ -243,25 +249,23 @@ onUnmounted(() => {
     <!-- Bottom bar: point count + undo / clear -->
     <div class="flex items-center justify-between border-t border-white/10 bg-black/40 px-3 py-1.5">
       <span class="text-xs text-slate-400">
-        {{ points.length }} point{{ points.length !== 1 ? 's' : '' }}
-        <span v-if="points.length < 3" class="text-slate-600"> - need {{ 3 - points.length }} more</span>
+        {{ points.length }} {{ points.length !== 1 ? l.ui_points : l.ui_point }}
+        <span v-if="points.length < 3" class="text-slate-600"> - {{ t('ui_zone_need_more', 3 - points.length) }}</span>
       </span>
       <div class="flex items-center gap-1.5">
         <button
           class="rounded px-2 py-0.5 text-xs text-slate-400 transition hover:bg-white/10 hover:text-slate-200 disabled:opacity-30"
           :disabled="points.length === 0"
-          title="Undo last point"
           @click.stop="undoLast"
         >
-          <i class="pi pi-undo text-[0.7rem]" /> Undo
+          <i class="pi pi-undo text-[0.7rem]" /> {{ l.ui_zone_undo }}
         </button>
         <button
           class="rounded px-2 py-0.5 text-xs text-slate-400 transition hover:bg-white/10 hover:text-red-400 disabled:opacity-30"
           :disabled="points.length === 0"
-          title="Clear all"
           @click.stop="clearAll"
         >
-          <i class="pi pi-trash text-[0.7rem]" /> Clear
+          <i class="pi pi-trash text-[0.7rem]" /> {{ l.ui_zone_clear }}
         </button>
       </div>
     </div>

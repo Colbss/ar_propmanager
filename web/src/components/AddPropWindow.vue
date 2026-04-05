@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useAddPropStore } from '../stores/addprop.store'
 import { usePropManagerStore } from '../stores/propmanager.store'
 import { useApi } from '../composables/useApi'
+import { useLocaleStore } from '../stores/locale.store'
 
 const emit = defineEmits<{ done: [] }>()
 
 const addPropStore = useAddPropStore()
 const propStore    = usePropManagerStore()
+const localeStore  = useLocaleStore()
+const { locales: l } = storeToRefs(localeStore)
+const { t } = localeStore
 
 // ─── Prop list ────────────────────────────────────────────────────────────────
 
@@ -179,7 +184,7 @@ const place = async () => {
 
     <!-- Model search -->
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-medium text-slate-400">Prop Model</label>
+      <label class="text-xs font-medium text-slate-400">{{ l.ui_prop_model_label }}</label>
       <div class="relative">
         <div class="pointer-events-none absolute inset-y-0 left-2.5 flex items-center">
           <i class="pi pi-search text-xs text-slate-500" />
@@ -187,7 +192,7 @@ const place = async () => {
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Search or type model name…"
+          :placeholder="l.ui_prop_model_placeholder"
           class="w-full rounded border border-white/10 bg-white/5 py-1.5 pl-7 pr-3 text-xs text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-white/25 focus:bg-white/10"
           @focus="showResults = true"
           @blur="onBlur"
@@ -198,7 +203,7 @@ const place = async () => {
           v-if="showResults && filteredProps.length > 0"
           class="absolute top-full z-10 mt-1 max-h-[20vh] w-full overflow-y-auto rounded border border-white/10 bg-black/95 shadow-xl"
         >
-          <div v-if="listLoading" class="px-3 py-2 text-xs text-slate-500">Loading prop list…</div>
+          <div v-if="listLoading" class="px-3 py-2 text-xs text-slate-500">{{ l.ui_prop_list_loading }}</div>
           <button
             v-for="name in filteredProps"
             :key="name"
@@ -211,14 +216,14 @@ const place = async () => {
       </div>
       <p v-if="searchQuery && !propList.includes(searchQuery)" class="text-[0.7rem] text-amber-400/80">
         <i class="pi pi-exclamation-triangle mr-1 text-[0.6rem]" />
-        Not in list - will be validated in-game
+        {{ l.ui_prop_not_in_list }}
       </p>
     </div>
 
     <!-- Group + Render distance (2-col) -->
     <div class="grid grid-cols-2 gap-3">
       <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-medium text-slate-400">Group</label>
+        <label class="text-xs font-medium text-slate-400">{{ l.ui_group_label }}</label>
         <!-- Group dropdown (existingGroups is scoped to allowedGroups for restricted players) -->
         <div class="relative">
           <div class="pointer-events-none absolute inset-y-0 left-2.5 flex items-center">
@@ -227,7 +232,7 @@ const place = async () => {
           <input
             v-model="form.group"
             type="text"
-            placeholder="Select or type group…"
+            :placeholder="l.ui_group_placeholder"
             class="w-full rounded border border-white/10 bg-white/5 py-1.5 pl-7 pr-3 text-xs text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-white/25 focus:bg-white/10"
             @focus="showGroupResults = true"
             @blur="onGroupBlur"
@@ -247,7 +252,7 @@ const place = async () => {
       </div>
 
       <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-medium text-slate-400">Render Distance (m)</label>
+        <label class="text-xs font-medium text-slate-400">{{ l.ui_render_distance_label }}</label>
         <input
           v-model.number="form.renderDistance"
           type="number"
@@ -265,12 +270,12 @@ const place = async () => {
       <template v-if="addPropStore.maxExpiry">
         <div class="flex items-center gap-2 rounded border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
           <i class="pi pi-clock text-[0.7rem]" />
-          This prop will expire after {{ formatExpiry(addPropStore.maxExpiry) }}.
+          {{ t('ui_expiry_notice', formatExpiry(addPropStore.maxExpiry)) }}
         </div>
       </template>
       <template v-else>
         <div class="flex items-center justify-between">
-          <label class="text-xs font-medium text-slate-400">Expiry</label>
+          <label class="text-xs font-medium text-slate-400">{{ l.ui_expiry_label }}</label>
           <button
             type="button"
             class="rounded px-2 py-1 text-xs transition"
@@ -279,7 +284,7 @@ const place = async () => {
               : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
             @click.stop="form.hasExpiry = !form.hasExpiry"
           >
-            {{ form.hasExpiry ? 'Enabled' : 'Disabled' }}
+            {{ form.hasExpiry ? l.ui_expiry_enabled : l.ui_expiry_disabled }}
           </button>
         </div>
         <Transition name="form-slide">
@@ -303,7 +308,7 @@ const place = async () => {
       class="rounded bg-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/20"
       @click="emit('done')"
     >
-      Cancel
+      {{ l.ui_cancel }}
     </button>
     <button
       class="flex items-center gap-1.5 rounded bg-blue-600/80 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-500/80 disabled:opacity-40"
@@ -311,7 +316,7 @@ const place = async () => {
       @click="place"
     >
       <i class="pi pi-map-marker text-[0.7rem]" />
-      {{ placing ? 'Placing…' : 'Place Prop' }}
+      {{ placing ? l.ui_placing : l.ui_place_prop }}
     </button>
   </div>
   </div>

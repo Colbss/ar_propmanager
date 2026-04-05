@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useLocaleStore } from '../stores/locale.store'
 import L from 'leaflet'
 import type { Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -10,6 +12,7 @@ import 'leaflet.heat'
 import { usePropManagerStore, type PropEntry } from '../stores/propmanager.store'
 
 const store = usePropManagerStore()
+const { locales: l } = storeToRefs(useLocaleStore())
 
 // ─── Mode ─────────────────────────────────────────────────────────────────────
 
@@ -242,7 +245,7 @@ const deleteFromCluster = (prop: PropEntry) => {
           @click="mode = 'clusters'"
         >
           <i class="pi pi-circle-fill text-[0.7rem]" />
-          Clusters
+          {{ l.ui_map_clusters }}
         </button>
         <button
           class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
@@ -252,24 +255,23 @@ const deleteFromCluster = (prop: PropEntry) => {
           @click="mode = 'heatmap'"
         >
           <i class="pi pi-stop-circle text-[0.7rem]" />
-          Heatmap
+          {{ l.ui_map_heatmap }}
         </button>
       </div>
 
       <!-- Stats + outline toggle -->
       <div class="flex items-center gap-2">
-        <span class="text-xs text-slate-500">{{ store.props.length }} prop{{ store.props.length !== 1 ? 's' : '' }}</span>
+        <span class="text-xs text-slate-500">{{ store.props.length }} {{ store.props.length !== 1 ? l.ui_props : l.ui_prop }}</span>
         <button
           class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition"
           :class="allOutlined
             ? 'bg-amber-500/30 text-amber-300 hover:bg-amber-500/20'
             : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'"
           :disabled="store.props.length === 0"
-          :title="allOutlined ? 'Clear all outlines' : 'Outline all props'"
           @click="store.outlineAll()"
         >
           <i class="pi pi-eye text-[0.7rem]" />
-          {{ allOutlined ? 'Clear Outlines' : 'Outline All' }}
+          {{ allOutlined ? l.ui_map_clear_outlines : l.ui_map_outline_all }}
         </button>
       </div>
     </div>
@@ -285,7 +287,7 @@ const deleteFromCluster = (prop: PropEntry) => {
         v-if="selectedCluster.length > 0"
         class="flex items-center justify-between border-b border-white/5 px-4 py-1.5"
       >
-        <span class="text-xs text-slate-400">{{ selectedCluster.length }} props at this location</span>
+        <span class="text-xs text-slate-400">{{ selectedCluster.length }} {{ selectedCluster.length !== 1 ? l.ui_props : l.ui_prop }} {{ l.ui_map_at_location }}</span>
         <button class="text-xs text-slate-600 transition hover:text-slate-400" @click="clearSelection">✕</button>
       </div>
 
@@ -307,7 +309,7 @@ const deleteFromCluster = (prop: PropEntry) => {
             class="flex shrink-0 items-center gap-1 rounded bg-red-600/20 px-2.5 py-1 text-xs text-red-400 transition hover:bg-red-600/40 hover:text-red-300"
             @click="selected ? deleteSelected() : deleteFromCluster(prop)"
           >
-            <i class="pi pi-trash text-[0.7rem]" /> Delete
+            <i class="pi pi-trash text-[0.7rem]" /> {{ l.ui_map_delete }}
           </button>
         </div>
       </div>
@@ -316,7 +318,7 @@ const deleteFromCluster = (prop: PropEntry) => {
     <!-- Footer: hint -->
     <div class="flex h-[3vh] shrink-0 items-center border-t border-white/10 px-4">
       <span class="text-xs text-slate-600">
-        {{ mode === 'clusters' ? 'Click a marker or cluster to select' : 'Heatmap - density of placed props' }}
+        {{ mode === 'clusters' ? l.ui_map_hint_clusters : l.ui_map_hint_heatmap }}
       </span>
     </div>
   </div>

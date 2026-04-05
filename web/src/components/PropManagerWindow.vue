@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useDraggable } from '@vueuse/core'
 import PropListWindow from './PropListWindow.vue'
 import AddPropWindow from './AddPropWindow.vue'
 import PlayerAccessWindow from './PlayerAccessWindow.vue'
 import PropMapWindow from './PropMapWindow.vue'
+import { useLocaleStore } from '../stores/locale.store'
 
 type Tab = 'props' | 'add-prop' | 'map' | 'permissions'
 
@@ -33,15 +35,17 @@ const { style } = useDraggable(windowEl, {
 
 const canAdd = computed(() => props.level >= 2 || props.level === 0)
 
-const ALL_TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'props',       label: 'Props',        icon: 'pi-list'      },
-  { key: 'add-prop',    label: 'Add Prop',      icon: 'pi-plus'      },
-  { key: 'map',         label: 'Map',           icon: 'pi-map'       },
-  { key: 'permissions', label: 'Player Access', icon: 'pi-users'     },
-]
+const { locales: l } = storeToRefs(useLocaleStore())
+
+const ALL_TABS = computed(() => [
+  { key: 'props'       as Tab, label: l.value.ui_tab_props,         icon: 'pi-list'  },
+  { key: 'add-prop'    as Tab, label: l.value.ui_tab_add_prop,      icon: 'pi-plus'  },
+  { key: 'map'         as Tab, label: l.value.ui_tab_map,           icon: 'pi-map'   },
+  { key: 'permissions' as Tab, label: l.value.ui_tab_player_access, icon: 'pi-users' },
+])
 
 const visibleTabs = computed(() =>
-  ALL_TABS.filter((tab) => {
+  ALL_TABS.value.filter((tab) => {
     if (tab.key === 'props')       return props.level >= 1 || props.level === 0
     if (tab.key === 'add-prop')    return canAdd.value
     if (tab.key === 'map')         return props.level >= 2
@@ -64,7 +68,7 @@ const visibleTabs = computed(() =>
       >
         <div class="flex items-center gap-2 text-sm font-semibold text-slate-200">
           <i class="pi pi-objects-column text-slate-400" />
-          Prop Manager
+          {{ l.ui_window_title }}
         </div>
         <button
           class="rounded p-1 text-slate-500 transition hover:text-slate-200"

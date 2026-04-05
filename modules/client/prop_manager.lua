@@ -5,6 +5,7 @@ local outlinedProps = {}
 --- @param  payload { level: integer, props: table[], groupStates: table<string, boolean>, playerAccess: table[]|nil, groups: string[]|nil }
 --- @return nil
 function OpenPropManager(payload)
+    payload.locales = BuildUILocales()
     SetNuiFocus(true, true)
     SendNUIMessage({ action = 'openPropManager', data = payload })
 end
