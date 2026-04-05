@@ -16,14 +16,31 @@ local function ClosePropManager()
     SendNUIMessage({ action = 'closePropManager', data = {} })
 end
 
-RegisterNUICallback('ClosePropManager', function(_, cb)
-    SetNuiFocus(false, false)
-    cb('ok')
-end)
+--- Build a NUI-ready prop entry from a client-side propCache entry.
+--- @param  id    integer  Prop database ID
+--- @param  prop  { model: string, position: { x: number, y: number, z: number }, quaternion: { x: number, y: number, z: number, w: number }|nil, group: string, renderDistance: number, expiresAt: integer|nil }
+--- @return { id: integer, model: string, position: table, quaternion: table|nil, group: string, outlined: boolean, renderDistance: number, expiresAt: integer|nil }
+local function buildPropEntryFromCache(id, prop)
+    return {
+        id             = id,
+        model          = prop.model,
+        position       = prop.position,
+        quaternion     = prop.quaternion,
+        group          = prop.group,
+        outlined       = outlinedProps[id] == true,
+        renderDistance = prop.renderDistance or 200,
+        expiresAt      = prop.expiresAt,
+    }
+end
 
 -- ███  ██ ██  ██ ██ 
 -- ██ ▀▄██ ██  ██ ██ 
 -- ██   ██ ▀████▀ ██ 
+
+RegisterNUICallback('ClosePropManager', function(_, cb)
+    SetNuiFocus(false, false)
+    cb('ok')
+end)
 
 RegisterNUICallback('PlaceProp', function(data, cb)
     local model = data.model
@@ -272,71 +289,43 @@ RegisterNetEvent('ar_propmanager:groupStatesChanged', function(groupStates)
     SendNUIMessage({ action = 'updateGroupStates', data = groupStates })
 end)
 
-RegisterNetEvent('ar_propmanager:openPropManagerFromServer', function(payload)
+RegisterNetEvent('ar_propmanager:openPropManager', function(openData)
+    if not openData then return end
+
+    local props       = {}
+    local groupStates = {}
+
+    if openData.level == 0 then
+        local allowed = {}
+        for _, entry in ipairs(openData.playerAccess or {}) do
+            for _, g in ipairs(entry.groups or {}) do allowed[g] = true end
+        end
+        for id, prop in pairs(propCache) do
+            if allowed[prop.group] then
+                props[#props + 1]       = buildPropEntryFromCache(id, prop)
+                groupStates[prop.group] = groupEnabled[prop.group]
+            end
+        end
+    else
+        for id, prop in pairs(propCache) do
+            props[#props + 1] = buildPropEntryFromCache(id, prop)
+        end
+        for name, enabled in pairs(groupEnabled) do
+            groupStates[name] = enabled
+        end
+    end
+
+    local payload = {
+        level       = openData.level,
+        props       = props,
+        groupStates = groupStates,
+    }
+    if openData.playerAccess then payload.playerAccess = openData.playerAccess end
+    if openData.groups       then payload.groups       = openData.groups end
+
     OpenPropManager(payload)
 end)
 
 RegisterNetEvent('ar_propmanager:playerAccessSaved', function(entry)
     SendNUIMessage({ action = 'playerAccessSaved', data = entry })
 end)
-
--- ▄█████ ▄████▄ ██▄  ▄██ ██▄  ▄██ ▄████▄ ███  ██ ████▄  ▄█████ 
--- ██     ██  ██ ██ ▀▀ ██ ██ ▀▀ ██ ██▄▄██ ██ ▀▄██ ██  ██ ▀▀▀▄▄▄ 
--- ▀█████ ▀████▀ ██    ██ ██    ██ ██  ██ ██   ██ ████▀  █████▀ 
-
---- Build a NUI-ready prop entry from a client-side propCache entry.
---- @param  id    integer  Prop database ID
---- @param  prop  { model: string, position: { x: number, y: number, z: number }, quaternion: { x: number, y: number, z: number, w: number }|nil, group: string, renderDistance: number, expiresAt: integer|nil }
---- @return { id: integer, model: string, position: table, quaternion: table|nil, group: string, outlined: boolean, renderDistance: number, expiresAt: integer|nil }
-local function buildPropEntryFromCache(id, prop)
-    return {
-        id             = id,
-        model          = prop.model,
-        position       = prop.position,
-        quaternion     = prop.quaternion,
-        group          = prop.group,
-        outlined       = outlinedProps[id] == true,
-        renderDistance = prop.renderDistance or 200,
-        expiresAt      = prop.expiresAt,
-    }
-end
-
-RegisterCommand('manage_props', function()
-    lib.callback('ar_propmanager:getOpenData', false, function(openData)
-        if not openData then return end
-
-        local props       = {}
-        local groupStates = {}
-
-        if openData.level == 0 then
-            -- Restricted player: only show props from their allowed groups
-            local allowed = {}
-            for _, entry in ipairs(openData.playerAccess or {}) do
-                for _, g in ipairs(entry.groups or {}) do allowed[g] = true end
-            end
-            for id, prop in pairs(propCache) do
-                if allowed[prop.group] then
-                    props[#props + 1]       = buildPropEntryFromCache(id, prop)
-                    groupStates[prop.group] = groupEnabled[prop.group]
-                end
-            end
-        else
-            for id, prop in pairs(propCache) do
-                props[#props + 1] = buildPropEntryFromCache(id, prop)
-            end
-            for name, enabled in pairs(groupEnabled) do
-                groupStates[name] = enabled
-            end
-        end
-
-        local payload = {
-            level       = openData.level,
-            props       = props,
-            groupStates = groupStates,
-        }
-        if openData.playerAccess then payload.playerAccess = openData.playerAccess end
-        if openData.groups       then payload.groups       = openData.groups end
-
-        OpenPropManager(payload)
-    end)
-end, false)

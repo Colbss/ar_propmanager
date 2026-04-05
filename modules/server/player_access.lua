@@ -1,3 +1,4 @@
+local config = require 'config'
 lib.locale()
 
 --- Decode the JSON zones column from a player-access DB row into a Lua table.
@@ -11,53 +12,43 @@ local function rowToZones(row)
     return {}
 end
 
---- Build the prop-manager open payload tailored to a specific player's access level.
---- Returns nil when a level-0 player has no access entries.
---- @param  source  integer   Player server ID
---- @return { level: integer, props: table[], groupStates: table<string, boolean>, playerAccess: table[]|nil, groups: string[]|nil }|nil
-local function buildPlayerPayload(source)
+--- Build the open-data payload for a player (used by both the command and the callback).
+--- @param  source  integer
+--- @return { level: integer, playerAccess: table[]|nil, groups: string[]|nil }|nil
+local function buildOpenData(source)
     local level = getPlayerLevel(source)
 
     if level == 0 then
         local identifier = getIdentifier(source)
         if not identifier then return nil end
 
-        local accessRows = MySQL.query.await(
-            'SELECT `groups` FROM `ar_props_player_access` WHERE identifier = ?',
+        local rows = MySQL.query.await(
+            'SELECT * FROM `ar_props_player_access` WHERE identifier = ?',
             { identifier }
         )
-        if not accessRows or #accessRows == 0 then return nil end
+        if not rows or #rows == 0 then return nil end
 
-        local allowed = {}
-        for _, row in ipairs(accessRows) do
+        local entries  = {}
+        local anyGroup = false
+        for _, row in ipairs(rows) do
             local ok, groupList = pcall(json.decode, row.groups)
-            if ok and groupList then
-                for _, g in ipairs(groupList) do allowed[g] = true end
-            end
+            local groupArr = (ok and groupList) or {}
+            if #groupArr > 0 then anyGroup = true end
+            entries[#entries + 1] = {
+                id         = row.id,
+                identifier = row.identifier,
+                name       = row.name,
+                groups     = groupArr,
+                zones      = rowToZones(row),
+                maxExpiry  = row.max_expiry,
+            }
         end
-        if not next(allowed) then return nil end
+        if not anyGroup then return nil end
 
-        local propList    = {}
-        local stateSubset = {}
-        for gName, group in pairs(groups) do
-            if allowed[gName] then
-                stateSubset[gName] = group.enabled
-                for dbId, prop in pairs(group.props) do
-                    propList[#propList + 1] = buildPropEntry(dbId, prop, gName)
-                end
-            end
-        end
-
-        return { level = 2, props = propList, groupStates = stateSubset }
+        return { level = 0, playerAccess = entries }
     end
 
-    local payload = { level = level, props = {}, groupStates = {} }
-
-    if level >= 1 then
-        local sync      = buildSyncPayload()
-        payload.props       = sync.props
-        payload.groupStates = sync.groupStates
-    end
+    local payload = { level = level }
 
     if level >= 3 then
         local rows    = MySQL.query.await('SELECT * FROM `ar_props_player_access`')
@@ -70,6 +61,7 @@ local function buildPlayerPayload(source)
                 name       = row.name,
                 groups     = (ok and groupList) or {},
                 zones      = rowToZones(row),
+                maxExpiry  = row.max_expiry,
             }
         end
         payload.playerAccess = entries
@@ -181,69 +173,18 @@ lib.callback.register('ar_propmanager:canInteractWithProp', function(source, pro
     return getPlayerLevel(source) >= 2
 end)
 
-lib.callback.register('ar_propmanager:getProps', function(source)
-    return buildPlayerPayload(source)
-end)
-
-lib.callback.register('ar_propmanager:getOpenData', function(source)
-    local level = getPlayerLevel(source)
-
-    if level == 0 then
-        local identifier = getIdentifier(source)
-        if not identifier then return nil end
-
-        local rows = MySQL.query.await(
-            'SELECT * FROM `ar_props_player_access` WHERE identifier = ?',
-            { identifier }
-        )
-        if not rows or #rows == 0 then return nil end
-
-        local entries  = {}
-        local anyGroup = false
-        for _, row in ipairs(rows) do
-            local ok, groupList = pcall(json.decode, row.groups)
-            local groupArr = (ok and groupList) or {}
-            if #groupArr > 0 then anyGroup = true end
-            entries[#entries + 1] = {
-                id         = row.id,
-                identifier = row.identifier,
-                name       = row.name,
-                groups     = groupArr,
-                zones      = rowToZones(row),
-                maxExpiry  = row.max_expiry,
-            }
-        end
-        if not anyGroup then return nil end
-
-        return { level = 0, playerAccess = entries }
-    end
-
-    local payload = { level = level }
-
-    if level >= 3 then
-        local rows    = MySQL.query.await('SELECT * FROM `ar_props_player_access`')
-        local entries = {}
-        for _, row in ipairs(rows or {}) do
-            local ok, groupList = pcall(json.decode, row.groups)
-            entries[#entries + 1] = {
-                id         = row.id,
-                identifier = row.identifier,
-                name       = row.name,
-                groups     = (ok and groupList) or {},
-                zones      = rowToZones(row),
-                maxExpiry  = row.max_expiry,
-            }
-        end
-        payload.playerAccess = entries
-
-        local groupNames = {}
-        for name in pairs(groups) do groupNames[#groupNames + 1] = name end
-        payload.groups = groupNames
-    end
-
-    return payload
-end)
-
 lib.callback.register('ar_propmanager:getSpawnData', function()
     return buildSyncPayload()
+end)
+
+-- ▄█████ ▄████▄ ██▄  ▄██ ██▄  ▄██ ▄████▄ ███  ██ ████▄  ▄█████ 
+-- ██     ██  ██ ██ ▀▀ ██ ██ ▀▀ ██ ██▄▄██ ██ ▀▄██ ██  ██ ▀▀▀▄▄▄ 
+-- ▀█████ ▀████▀ ██    ██ ██    ██ ██  ██ ██   ██ ████▀  █████▀ 
+
+lib.addCommand(config.command, {
+    help = 'Open the prop manager',
+}, function(source)
+    local openData = buildOpenData(source)
+    if not openData then return end
+    TriggerClientEvent('ar_propmanager:openPropManager', source, openData)
 end)

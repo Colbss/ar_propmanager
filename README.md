@@ -72,10 +72,9 @@ exports.ar_propmanager:OpenGizmo(entity, options, onFinish, onCancel)
 ## Install
 
 1. Download the latest [release](https://github.com/Colbss/ar_propmanager/releases/latest)
-2. Import the SQL — tables are created automatically on first resource start
-3. Add `ensure ar_propmanager` to your `server.cfg`
-4. Configure ACE permissions and the expiry cron in `config.lua`
-5. Check / set up the framework bridge for your framework
+2. Add `ensure ar_propmanager` to your `server.cfg`
+3. Configure ACE permissions and the expiry cron in `config.lua`
+4. Check / set up the framework bridge for your framework
 
 ## Frameworks
 

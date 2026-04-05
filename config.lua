@@ -16,4 +16,6 @@ return {
         [2] = 'admin',
         [3] = 'superadmin',
     },
+
+    command = 'manage_props'
 }
