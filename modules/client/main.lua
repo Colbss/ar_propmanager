@@ -1,12 +1,9 @@
 local config = require 'config'
 lib.locale()
 
--- ─── Spawn state ─────────────────────────────────────────────────────────────
---
--- propCache    : [id] = { model, position, quaternion, renderDistance, group, expiresAt }
--- groupEnabled : [groupName] = bool
--- spawnedProps : [id] = entity handle
--- pendingSpawn : [id] = bool  (model loading, not yet spawned)
+-- ▄█████ █████▄ ▄████▄ ██     ██ ███  ██ ██ ███  ██  ▄████  
+-- ▀▀▀▄▄▄ ██▄▄█▀ ██▄▄██ ██ ▄█▄ ██ ██ ▀▄██ ██ ██ ▀▄██ ██  ▄▄▄ 
+-- █████▀ ██     ██  ██  ▀██▀██▀  ██   ██ ██ ██   ██  ▀███▀                                                     
 
 propCache    = {}
 groupEnabled = {}
@@ -60,9 +57,10 @@ local function applySpawnPayload(payload)
     print('Props loaded:', #payload.props)
 end
 
--- ─── Spawn management thread ──────────────────────────────────────────────────
+-- ██████ ██  ██ █████▄  ██████ ▄████▄ ████▄  ▄█████ 
+--   ██   ██████ ██▄▄██▄ ██▄▄   ██▄▄██ ██  ██ ▀▀▀▄▄▄ 
+--   ██   ██  ██ ██   ██ ██▄▄▄▄ ██  ██ ████▀  █████▀ 
 
--- Spawns/despawns props based on player distance and group enabled state.
 CreateThread(function()
     while true do
         Wait(1000)
@@ -102,7 +100,9 @@ CreateThread(function()
     end
 end)
 
--- ─── Startup ──────────────────────────────────────────────────
+-- ██  ██ ▄████▄ ███  ██ ████▄  ██     ██████ █████▄  ▄█████ 
+-- ██████ ██▄▄██ ██ ▀▄██ ██  ██ ██     ██▄▄   ██▄▄██▄ ▀▀▀▄▄▄ 
+-- ██  ██ ██  ██ ██   ██ ████▀  ██████ ██▄▄▄▄ ██   ██ █████▀ 
 
 function RequestData()
     lib.print.info('Waiting for server...')
@@ -136,8 +136,6 @@ AddEventHandler('onClientResourceStart', function(resourceName)
     if not Framework?.IsLoaded() then return end
     RequestData()
 end)
-
--- ─── Shutdown ─────────────────────────────────────────────────────────────────
 
 AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end

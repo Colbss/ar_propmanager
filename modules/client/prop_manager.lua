@@ -1,6 +1,5 @@
--- ─── Prop Manager ─────────────────────────────────────────────────────────────
 
-local outlinedProps = {} -- prop IDs currently outlined in-game
+local outlinedProps = {} 
 
 --- Open the prop manager window.
 --- @param payload table  { level, props, groupStates, ... }
@@ -19,7 +18,9 @@ RegisterNUICallback('ClosePropManager', function(_, cb)
     cb('ok')
 end)
 
--- ─── Prop NUI callbacks ───────────────────────────────────────────────────────
+-- ███  ██ ██  ██ ██ 
+-- ██ ▀▄██ ██  ██ ██ 
+-- ██   ██ ▀████▀ ██ 
 
 RegisterNUICallback('PlaceProp', function(data, cb)
     local model = data.model
@@ -195,8 +196,6 @@ RegisterNUICallback('GetPlayerPosition', function(_, cb)
     cb({ x = pos.x, y = pos.y, z = pos.z })
 end)
 
--- ─── Player access NUI callbacks ──────────────────────────────────────────────
-
 RegisterNUICallback('GetOnlinePlayers', function(_, cb)
     lib.callback('ar_propmanager:getOnlinePlayers', false, function(players)
         cb(players or {})
@@ -218,7 +217,9 @@ RegisterNUICallback('DeletePlayerAccess', function(data, cb)
     cb('ok')
 end)
 
--- ─── Server → client events ───────────────────────────────────────────────────
+-- ██████ ██  ██ ██████ ███  ██ ██████ ▄█████ 
+-- ██▄▄   ██▄▄██ ██▄▄   ██ ▀▄██   ██   ▀▀▀▄▄▄ 
+-- ██▄▄▄▄  ▀██▀  ██▄▄▄▄ ██   ██   ██   █████▀ 
 
 RegisterNetEvent('ar_propmanager:propAdded', function(prop)
     if groupEnabled[prop.group] == nil then groupEnabled[prop.group] = true end
@@ -268,49 +269,17 @@ RegisterNetEvent('ar_propmanager:groupStatesChanged', function(groupStates)
     SendNUIMessage({ action = 'updateGroupStates', data = groupStates })
 end)
 
---- Triggered by the server export OpenPropManagerForPlayer.
 RegisterNetEvent('ar_propmanager:openPropManagerFromServer', function(payload)
     OpenPropManager(payload)
 end)
 
---- Server confirms a newly added player access entry with its real DB id.
 RegisterNetEvent('ar_propmanager:playerAccessSaved', function(entry)
     SendNUIMessage({ action = 'playerAccessSaved', data = entry })
 end)
 
--- ─── Commands ─────────────────────────────────────────────────────────────────
-
-RegisterCommand('test_prop_manager', function()
-    local ped       = PlayerPedId()
-    local origin    = GetEntityCoords(ped)
-    local propList  = {}
-    local mockGroups   = { 'Street Furniture', 'Vehicles', 'Nature' }
-    local now          = os.time()
-    local mockExpiries = { nil, now + 3600, now + 86400, now - 60 }
-
-    local count = 0
-    for _, obj in ipairs(GetGamePool('CObject')) do
-        if #(GetEntityCoords(obj) - origin) < 30.0 then
-            local pos = GetEntityCoords(obj)
-            count     = count + 1
-            propList[#propList + 1] = {
-                id             = obj,
-                model          = tostring(GetEntityModel(obj)),
-                position       = { x = pos.x, y = pos.y, z = pos.z },
-                group          = mockGroups[(count % #mockGroups) + 1],
-                outlined       = false,
-                renderDistance = 200,
-                expiresAt      = mockExpiries[(count % #mockExpiries) + 1],
-            }
-            if count >= 20 then break end
-        end
-    end
-
-    local groupStates = {}
-    for _, g in ipairs(mockGroups) do groupStates[g] = true end
-
-    OpenPropManager({ props = propList, groupStates = groupStates })
-end, false)
+-- ▄█████ ▄████▄ ██▄  ▄██ ██▄  ▄██ ▄████▄ ███  ██ ████▄  ▄█████ 
+-- ██     ██  ██ ██ ▀▀ ██ ██ ▀▀ ██ ██▄▄██ ██ ▀▄██ ██  ██ ▀▀▀▄▄▄ 
+-- ▀█████ ▀████▀ ██    ██ ██    ██ ██  ██ ██   ██ ████▀  █████▀ 
 
 local function buildPropEntryFromCache(id, prop)
     return {
@@ -364,9 +333,3 @@ RegisterCommand('manage_props', function()
         OpenPropManager(payload)
     end)
 end, false)
-
--- ─── Exports ─────────────────────────────────────────────────────────────────
-
-exports('OpenPropManager', function(payload)
-    OpenPropManager(payload)
-end)

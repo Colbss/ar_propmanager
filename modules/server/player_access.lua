@@ -1,8 +1,5 @@
 lib.locale()
 
--- ─── Player access events ─────────────────────────────────────────────────────
-
---- Decodes the zones JSON column into a Lua table (array of zone point arrays).
 local function rowToZones(row)
     if not row.zones then return {} end
     local ok, zones = pcall(json.decode, row.zones)
@@ -10,109 +7,9 @@ local function rowToZones(row)
     return {}
 end
 
---- data: { identifier, name, groups, zones? }
-RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
-    local src = source
-    if getPlayerLevel(src) < 3 then return end
-
-    local existing = MySQL.query.await(
-        'SELECT id FROM `ar_props_player_access` WHERE identifier = ? LIMIT 1',
-        { data.identifier }
-    )
-    if existing and #existing > 0 then return end
-
-    local id = MySQL.insert.await(
-        'INSERT INTO `ar_props_player_access` (identifier,name,groups,zones) VALUES (?,?,?,?)',
-        { data.identifier, data.name, json.encode(data.groups or {}), json.encode(data.zones or {}) }
-    )
-
-    -- Return confirmed record so UI can swap the optimistic temp id
-    TriggerClientEvent('ar_propmanager:playerAccessSaved', src, {
-        id         = id,
-        identifier = data.identifier,
-        name       = data.name,
-        groups     = data.groups or {},
-        zones      = data.zones or {},
-    })
-
-    CreateLog(src, locale('logs_add_player_access_title'), locale('logs_add_player_access_description'), {
-        id         = id,
-        identifier = data.identifier,
-        name       = data.name,
-        groups     = data.groups or {},
-    })
-end)
-
---- data: { id, identifier, name, groups, zones? }
-RegisterNetEvent('ar_propmanager:updatePlayerAccess', function(data)
-    local src = source
-    if getPlayerLevel(src) < 3 then return end
-
-    MySQL.query(
-        'UPDATE `ar_props_player_access` SET identifier=?,name=?,groups=?,zones=? WHERE id=?',
-        { data.identifier, data.name, json.encode(data.groups or {}), json.encode(data.zones or {}), data.id }
-    )
-
-    CreateLog(src, locale('logs_update_player_access_title'), locale('logs_update_player_access_description'), {
-        id         = data.id,
-        identifier = data.identifier,
-        name       = data.name,
-        groups     = data.groups or {},
-    })
-end)
-
-RegisterNetEvent('ar_propmanager:deletePlayerAccess', function(id)
-    local src = source
-    if getPlayerLevel(src) < 3 then return end
-
-    local row = MySQL.query.await('SELECT identifier, name FROM `ar_props_player_access` WHERE id = ? LIMIT 1', { id })
-    MySQL.query('DELETE FROM `ar_props_player_access` WHERE id = ?', { id })
-
-    CreateLog(src, locale('logs_delete_player_access_title'), locale('logs_delete_player_access_description'), {
-        id         = id,
-        identifier = row and row[1] and row[1].identifier or 'unknown',
-        name       = row and row[1] and row[1].name       or 'unknown',
-    })
-end)
-
--- ─── Server callbacks ─────────────────────────────────────────────────────────
-
-lib.callback.register('ar_propmanager:getOnlinePlayers', function(source)
-    if getPlayerLevel(source) < 3 then return {} end
-
-    local players = {}
-    for _, playerId in ipairs(GetPlayers()) do
-        if tonumber(playerId) == source then
-            goto continue
-        end
-        local identifier = getIdentifier(tonumber(playerId))
-        if identifier then
-            players[#players + 1] = {
-                name       = GetPlayerName(playerId),
-                identifier = identifier,
-            }
-        end
-        ::continue::
-    end
-    return players
-end)
-
-lib.callback.register('ar_propmanager:canInteractWithProp', function(source, propId)
-    for gName, group in pairs(groups) do
-        if group.props[propId] then
-            return hasPlayerAccess(source, gName, group.props[propId].position)
-        end
-    end
-    return getPlayerLevel(source) >= 2
-end)
-
---- Builds a prop-manager payload for `source`. Returns nil if the player has no access.
 local function buildPlayerPayload(source)
     local level = getPlayerLevel(source)
 
-    print(('Player %d has access level %d'):format(source, level))
-
-    -- No ace — check if they have explicit player-access rows
     if level == 0 then
         local identifier = getIdentifier(source)
         if not identifier then return nil end
@@ -177,13 +74,109 @@ local function buildPlayerPayload(source)
     return payload
 end
 
+-- ██████ ██  ██ ██████ ███  ██ ██████ ▄█████ 
+-- ██▄▄   ██▄▄██ ██▄▄   ██ ▀▄██   ██   ▀▀▀▄▄▄ 
+-- ██▄▄▄▄  ▀██▀  ██▄▄▄▄ ██   ██   ██   █████▀ 
+
+RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
+    local src = source
+    if getPlayerLevel(src) < 3 then return end
+
+    local existing = MySQL.query.await(
+        'SELECT id FROM `ar_props_player_access` WHERE identifier = ? LIMIT 1',
+        { data.identifier }
+    )
+    if existing and #existing > 0 then return end
+
+    local id = MySQL.insert.await(
+        'INSERT INTO `ar_props_player_access` (identifier,name,groups,zones) VALUES (?,?,?,?)',
+        { data.identifier, data.name, json.encode(data.groups or {}), json.encode(data.zones or {}) }
+    )
+
+    TriggerClientEvent('ar_propmanager:playerAccessSaved', src, {
+        id         = id,
+        identifier = data.identifier,
+        name       = data.name,
+        groups     = data.groups or {},
+        zones      = data.zones or {},
+    })
+
+    CreateLog(src, locale('logs_add_player_access_title'), locale('logs_add_player_access_description'), {
+        id         = id,
+        identifier = data.identifier,
+        name       = data.name,
+        groups     = data.groups or {},
+    })
+end)
+
+RegisterNetEvent('ar_propmanager:updatePlayerAccess', function(data)
+    local src = source
+    if getPlayerLevel(src) < 3 then return end
+
+    MySQL.query(
+        'UPDATE `ar_props_player_access` SET identifier=?,name=?,groups=?,zones=? WHERE id=?',
+        { data.identifier, data.name, json.encode(data.groups or {}), json.encode(data.zones or {}), data.id }
+    )
+
+    CreateLog(src, locale('logs_update_player_access_title'), locale('logs_update_player_access_description'), {
+        id         = data.id,
+        identifier = data.identifier,
+        name       = data.name,
+        groups     = data.groups or {},
+    })
+end)
+
+RegisterNetEvent('ar_propmanager:deletePlayerAccess', function(id)
+    local src = source
+    if getPlayerLevel(src) < 3 then return end
+
+    local row = MySQL.query.await('SELECT identifier, name FROM `ar_props_player_access` WHERE id = ? LIMIT 1', { id })
+    MySQL.query('DELETE FROM `ar_props_player_access` WHERE id = ?', { id })
+
+    CreateLog(src, locale('logs_delete_player_access_title'), locale('logs_delete_player_access_description'), {
+        id         = id,
+        identifier = row and row[1] and row[1].identifier or 'unknown',
+        name       = row and row[1] and row[1].name       or 'unknown',
+    })
+end)
+
+-- ▄█████ ▄████▄ ██     ██     █████▄ ▄████▄ ▄█████ ██ ▄█▀ ▄█████ 
+-- ██     ██▄▄██ ██     ██     ██▄▄██ ██▄▄██ ██     ████   ▀▀▀▄▄▄ 
+-- ▀█████ ██  ██ ██████ ██████ ██▄▄█▀ ██  ██ ▀█████ ██ ▀█▄ █████▀ 
+
+lib.callback.register('ar_propmanager:getOnlinePlayers', function(source)
+    if getPlayerLevel(source) < 3 then return {} end
+
+    local players = {}
+    for _, playerId in ipairs(GetPlayers()) do
+        if tonumber(playerId) == source then
+            goto continue
+        end
+        local identifier = getIdentifier(tonumber(playerId))
+        if identifier then
+            players[#players + 1] = {
+                name       = GetPlayerName(playerId),
+                identifier = identifier,
+            }
+        end
+        ::continue::
+    end
+    return players
+end)
+
+lib.callback.register('ar_propmanager:canInteractWithProp', function(source, propId)
+    for gName, group in pairs(groups) do
+        if group.props[propId] then
+            return hasPlayerAccess(source, gName, group.props[propId].position)
+        end
+    end
+    return getPlayerLevel(source) >= 2
+end)
+
 lib.callback.register('ar_propmanager:getProps', function(source)
     return buildPlayerPayload(source)
 end)
 
---- Lightweight callback — returns only what the client can't derive locally:
---- level, and for level 0: their access entries; for level 3: all entries + group names.
---- The client builds props/groupStates itself from propCache/groupEnabled.
 lib.callback.register('ar_propmanager:getOpenData', function(source)
     local level = getPlayerLevel(source)
 
@@ -243,20 +236,6 @@ lib.callback.register('ar_propmanager:getOpenData', function(source)
     return payload
 end)
 
---- Returns the full spawn payload for client-side rendering (no access filtering).
 lib.callback.register('ar_propmanager:getSpawnData', function()
     return buildSyncPayload()
-end)
-
--- ─── Exports ─────────────────────────────────────────────────────────────────
-
-exports('GetProps',        buildPropList)
-exports('GetGroupStates',  buildGroupStates)
-exports('HasPlayerAccess', hasPlayerAccess)
-exports('GetPlayerLevel',  getPlayerLevel)
-
-exports('OpenPropManagerForPlayer', function(playerId)
-    local payload = buildPlayerPayload(playerId)
-    if not payload then return end
-    TriggerClientEvent('ar_propmanager:openPropManagerFromServer', playerId, payload)
 end)

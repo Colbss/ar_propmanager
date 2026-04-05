@@ -1,22 +1,5 @@
 local config = require 'config'
 
--- ─── Runtime state ───────────────────────────────────────────────────────────
---
--- All props are indexed by group for O(1) group-level operations (toggle).
---
---   groups[groupName] = {
---       enabled = bool,
---       props   = {
---           [dbId] = {
---               model          = string,
---               position       = { x, y, z },
---               quat           = { x, y, z, w },
---               renderDistance = number,
---               expiresAt      = number | nil,
---           }
---       }
---   }
-
 groups = {}
 
 function getOrCreateGroup(name, enabled)
@@ -26,10 +9,6 @@ function getOrCreateGroup(name, enabled)
     return groups[name]
 end
 
--- ─── Permission & identity helpers ───────────────────────────────────────────
-
---- Returns the player's permission level (0 = none, 1 = toggleGroups, 2 = manage, 3 = playerAccess).
---- Levels are cumulative — level 3 implies levels 1 and 2.
 function getPlayerLevel(source)
     if IsPlayerAceAllowed(source, config.ace[3]) then return 3 end
     if IsPlayerAceAllowed(source, config.ace[2]) then return 2 end
@@ -41,8 +20,7 @@ function getIdentifier(source)
     return GetPlayerIdentifierByType(source, 'license')
 end
 
---- 2-D point-in-polygon via ray-casting (ignores Z).
-local function pointInZone(px, py, points)
+function pointInZone(px, py, points)
     if not points or #points < 3 then return false end
     local inside = false
     local j = #points
@@ -57,8 +35,6 @@ local function pointInZone(px, py, points)
     return inside
 end
 
---- Checks whether a player has access to a group/position.
---- Players with level >= 2 always pass; level-0 players are checked against ar_props_player_access.
 function hasPlayerAccess(source, group, position)
     if getPlayerLevel(source) >= 2 then return true end
 
@@ -72,7 +48,7 @@ function hasPlayerAccess(source, group, position)
     if not rows or #rows == 0 then return false end
 
     for _, row in ipairs(rows) do
-        if not row.zones then return true end -- no zone restriction
+        if not row.zones then return true end
 
         if not position then return true end
 
@@ -85,8 +61,6 @@ function hasPlayerAccess(source, group, position)
     end
     return false
 end
-
--- ─── Payload builders & broadcast ────────────────────────────────────────────
 
 function buildGroupStates()
     local states = {}
@@ -148,7 +122,9 @@ function broadcastGroupStates()
     TriggerClientEvent('ar_propmanager:groupStatesChanged', -1, buildGroupStates())
 end
 
--- ─── Schema ──────────────────────────────────────────────────────────────────
+-- ████▄  ▄████▄ ██████ ▄████▄ █████▄ ▄████▄ ▄█████ ██████ 
+-- ██  ██ ██▄▄██   ██   ██▄▄██ ██▄▄██ ██▄▄██ ▀▀▀▄▄▄ ██▄▄   
+-- ████▀  ██  ██   ██   ██  ██ ██▄▄█▀ ██  ██ █████▀ ██▄▄▄▄ 
 
 local function createTables()
     MySQL.query([[
@@ -191,7 +167,9 @@ local function createTables()
     ]])
 end
 
--- ─── Startup ─────────────────────────────────────────────────────────────────
+-- ██  ██ ▄████▄ ███  ██ ████▄  ██     ██████ █████▄  ▄█████ 
+-- ██████ ██▄▄██ ██ ▀▄██ ██  ██ ██     ██▄▄   ██▄▄██▄ ▀▀▀▄▄▄ 
+-- ██  ██ ██  ██ ██   ██ ████▀  ██████ ██▄▄▄▄ ██   ██ █████▀ 
 
 local function loadData()
     local groupRows = MySQL.query.await('SELECT * FROM `ar_prop_groups`')
@@ -228,8 +206,6 @@ if Framework then
 else
     print('^5No framework detected, prop manager functionalities will not work properly.^7')
 end
-
--- ─── Shutdown ─────────────────────────────────────────────────────────────────
 
 AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end

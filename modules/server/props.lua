@@ -17,7 +17,18 @@ function setGroupEnabled(groupName, enabled)
     broadcastGroupStates()
 end
 
---- data: { group = string, enabled = bool }
+local function pruneGroupIfEmpty(groupName)
+    local group = groups[groupName]
+    if not group then return end
+    if next(group.props) ~= nil then return end
+    groups[groupName] = nil
+    MySQL.query('DELETE FROM `ar_prop_groups` WHERE group_name = ?', { groupName })
+end
+
+-- ██████ ██  ██ ██████ ███  ██ ██████ ▄█████ 
+-- ██▄▄   ██▄▄██ ██▄▄   ██ ▀▄██   ██   ▀▀▀▄▄▄ 
+-- ██▄▄▄▄  ▀██▀  ██▄▄▄▄ ██   ██   ██   █████▀ 
+
 RegisterNetEvent('ar_propmanager:toggleGroup', function(data)
     local src = source
     if getPlayerLevel(src) < 1 then return end
@@ -28,9 +39,6 @@ RegisterNetEvent('ar_propmanager:toggleGroup', function(data)
     })
 end)
 
--- ─── Prop events ─────────────────────────────────────────────────────────────
-
---- data: { id?, model, position, quaternion, group, renderDistance?, expiresAt? }
 RegisterNetEvent('ar_propmanager:saveProp', function(data)
 
     local src  = source
@@ -38,7 +46,6 @@ RegisterNetEvent('ar_propmanager:saveProp', function(data)
     local quat = data.quaternion or { x = 0, y = 0, z = 0, w = 1 }
 
     if not hasPlayerAccess(src, data.group, pos) then
-        print(('[ar_propmanager] saveProp denied — player %s, group: %s'):format(src, data.group))
         return
     end
 
@@ -109,16 +116,6 @@ RegisterNetEvent('ar_propmanager:saveProp', function(data)
     end
 end)
 
---- Remove a group from memory and DB if it has no props remaining.
-local function pruneGroupIfEmpty(groupName)
-    local group = groups[groupName]
-    if not group then return end
-    if next(group.props) ~= nil then return end
-    groups[groupName] = nil
-    MySQL.query('DELETE FROM `ar_prop_groups` WHERE group_name = ?', { groupName })
-end
-
---- data: { id }
 RegisterNetEvent('ar_propmanager:deleteProp', function(data)
     local src = source
 
@@ -133,7 +130,6 @@ RegisterNetEvent('ar_propmanager:deleteProp', function(data)
     if not propData then return end
 
     if not hasPlayerAccess(src, targetGroupName, propData.position) then
-        print(('[ar_propmanager] deleteProp denied — player %s'):format(src))
         return
     end
 
@@ -150,7 +146,9 @@ RegisterNetEvent('ar_propmanager:deleteProp', function(data)
     })
 end)
 
--- ─── Expiry cron ─────────────────────────────────────────────────────────────
+-- ▄█████ █████▄  ▄████▄ ███  ██ 
+-- ██     ██▄▄██▄ ██  ██ ██ ▀▄██ 
+-- ▀█████ ██   ██ ▀████▀ ██   ██ 
 
 local function checkExpiredProps()
     local now     = os.time()
@@ -169,8 +167,6 @@ local function checkExpiredProps()
     for _, entry in ipairs(expired) do
         groups[entry.groupName].props[entry.dbId] = nil
         pruneGroupIfEmpty(entry.groupName)
-        print(('[ar_propmanager] Expired prop removed — id: %s, model: %s, group: %s')
-            :format(entry.dbId, entry.prop.model, entry.groupName))
         CreateLog(0, locale('logs_expire_prop_title'), locale('logs_expire_prop_description'), {
             id    = entry.dbId,
             model = entry.prop.model,
@@ -187,7 +183,3 @@ local function checkExpiredProps()
 end
 
 lib.cron.new(config.expiryCron, checkExpiredProps)
-
--- ─── Exports ─────────────────────────────────────────────────────────────────
-
-exports('SetGroupEnabled', setGroupEnabled)

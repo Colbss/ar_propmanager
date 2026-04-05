@@ -1,6 +1,8 @@
 lib.locale()
 
--- ─── Keybinds ─────────────────────────────────────────────────────────────────
+-- ██ ▄█▀ ██████ ██  ██ █████▄ ██ ███  ██ ████▄  ▄█████ 
+-- ████   ██▄▄    ▀██▀  ██▄▄██ ██ ██ ▀▄██ ██  ██ ▀▀▀▄▄▄ 
+-- ██ ▀█▄ ██▄▄▄▄   ██   ██▄▄█▀ ██ ██   ██ ████▀  █████▀ 
 
 -- Courtesy of @MadsL
 -- https://forum.cfx.re/t/help-how-to-get-the-current-keybind-of-a-registered-keymap/1847600/7
@@ -86,16 +88,16 @@ function keybinds.GetKeybinds()
         cancel = { key = GetKeyLabel(keybinds.cancel.hash), description = locale('keybind_cancel') },
     }
 end
-
--- ─── Gizmo state ─────────────────────────────────────────────────────────────
+                           
+--  ▄████  ██ ██████ ██▄  ▄██ ▄████▄ 
+-- ██  ▄▄▄ ██  ▄▄▀▀  ██ ▀▀ ██ ██  ██ 
+--  ▀███▀  ██ ██████ ██    ██ ▀████▀                               
 
 local gizmoActive        = false
 local currentGizmoEntity = nil
 local hasFocus           = false
 local gizmoOnFinish      = nil
 local gizmoOnCancel      = nil
-
--- ─── Gizmo ────────────────────────────────────────────────────────────────────
 
 local disabledControls = {
     23,     -- Enter
@@ -244,8 +246,10 @@ lib.onCache('vehicle', function(value)
         })
     end
 end)
-
--- ─── Gizmo NUI callbacks ──────────────────────────────────────────────────────
+             
+-- ███  ██ ██  ██ ██ 
+-- ██ ▀▄██ ██  ██ ██ 
+-- ██   ██ ▀████▀ ██ 
 
 RegisterNUICallback('TransformEntity', function(data, cb)
     if not currentGizmoEntity or not DoesEntityExist(currentGizmoEntity) then cb('error') return end
@@ -313,8 +317,10 @@ RegisterNUICallback('Cancel', function(_, cb)
     CloseGizmo(false)
     cb('ok')
 end)
-
--- ─── Exports ─────────────────────────────────────────────────────────────────
+                                            
+-- ██████ ██  ██ █████▄ ▄████▄ █████▄  ██████ ▄█████ 
+-- ██▄▄    ████  ██▄▄█▀ ██  ██ ██▄▄██▄   ██   ▀▀▀▄▄▄ 
+-- ██▄▄▄▄ ██  ██ ██     ▀████▀ ██   ██   ██   █████▀ 
 
 exports('OpenGizmo', function(entity, options, onFinish, onCancel)
     OpenGizmo(entity, options, onFinish, onCancel)
