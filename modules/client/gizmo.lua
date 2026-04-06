@@ -339,20 +339,6 @@ RegisterNUICallback('ResetRotation', function(_, cb)
     cb('ok')
 end)
 
-RegisterNUICallback('Finish', function(_, cb)
-    if not IsZonePlacementValid() then 
-        cb('ok')
-        return 
-    end
-    CloseGizmo(true)
-    cb('ok')
-end)
-
-RegisterNUICallback('Cancel', function(_, cb)
-    CloseGizmo(false)
-    cb('ok')
-end)
-
 RegisterNUICallback('ToggleZoneDraw', function(_, cb)
     if zoneDrawInterval then
         ClearInterval(zoneDrawInterval)

@@ -63,15 +63,23 @@ function hasPlayerAccess(source, group, position)
     local identifier = getIdentifier(source)
     if not identifier then return false end
 
-    local rows = MySQL.query.await(
-        'SELECT * FROM `ar_props_player_access` WHERE identifier = ? AND JSON_CONTAINS(`groups`, JSON_QUOTE(?))',
-        { identifier, group }
-    )
+    local isNewGroup = groups[group] == nil
+    local rows
+    if isNewGroup then
+        rows = MySQL.query.await(
+            'SELECT * FROM `ar_props_player_access` WHERE identifier = ?',
+            { identifier }
+        )
+    else
+        rows = MySQL.query.await(
+            'SELECT * FROM `ar_props_player_access` WHERE identifier = ? AND JSON_CONTAINS(`groups`, JSON_QUOTE(?))',
+            { identifier, group }
+        )
+    end
     if not rows or #rows == 0 then return false end
 
     for _, row in ipairs(rows) do
         if not row.zones then return true end
-
         if not position then return true end
 
         local ok, zones = pcall(json.decode, row.zones)
@@ -83,6 +91,26 @@ function hasPlayerAccess(source, group, position)
     end
     return false
 end
+
+--- Check whether a player is allowed to use a specific group name when placing a prop.
+--- Returns false only when the group already exists server-side and the player lacks access to it.
+--- New group names are always permitted here; zone checks happen at save time via hasPlayerAccess.
+--- @param  source  integer  Player server ID
+--- @param  group   string   Group name the player wants to place into
+--- @return boolean
+lib.callback.register('ar_propmanager:canUseGroup', function(source, group)
+    if getPlayerLevel(source) >= 2 then return true end
+    if not groups[group] then return true end  -- new group, allow it
+
+    local identifier = getIdentifier(source)
+    if not identifier then return false end
+
+    local rows = MySQL.query.await(
+        'SELECT id FROM `ar_props_player_access` WHERE identifier = ? AND JSON_CONTAINS(`groups`, JSON_QUOTE(?))',
+        { identifier, group }
+    )
+    return rows ~= nil and #rows > 0
+end)
 
 --- Build a flat map of every group name to its current enabled state.
 --- @return table<string, boolean>

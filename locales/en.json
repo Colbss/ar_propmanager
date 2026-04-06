@@ -49,6 +49,7 @@
     "ui_placing": "Placing...",
     "ui_place_prop": "Place Prop",
     "ui_error_invalid_model": "Invalid model - could not be loaded in-game",
+    "ui_error_group_no_access": "This group already exists but you don't have access to it",
     "ui_error_place_failed": "Failed to place prop",
 
     "ui_restricted_access": "Restricted Access",

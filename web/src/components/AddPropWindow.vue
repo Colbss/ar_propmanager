@@ -179,6 +179,8 @@ const place = async () => {
   if (data !== 'ok') {
     if (typeof data === 'object' && data?.error === 'invalid_model') {
       error.value = l.value.ui_error_invalid_model
+    } else if (typeof data === 'object' && data?.error === 'group_exists_no_access') {
+      error.value = l.value.ui_error_group_no_access
     } else {
       error.value = l.value.ui_error_place_failed
     }

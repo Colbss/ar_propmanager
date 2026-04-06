@@ -99,6 +99,7 @@ const visibleTabs = computed(() =>
         <PropListWindow
           v-if="activeTab === 'props'"
           :can-manage="level >= 2"
+          :can-delete="level >= 2 || level === 0"
           :can-edit="level >= 2 || level === 0"
           :can-teleport="level >= 1"
         />

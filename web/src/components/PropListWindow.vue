@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { usePropManagerStore } from '../stores/propmanager.store'
 import { useLocaleStore } from '../stores/locale.store'
 
-const props = defineProps<{ canManage: boolean; canEdit: boolean; canTeleport: boolean }>()
+const props = defineProps<{ canManage: boolean; canEdit: boolean; canTeleport: boolean; canDelete: boolean }>()
 
 const pmStore = usePropManagerStore()
 const { locales: l } = storeToRefs(useLocaleStore())
@@ -163,9 +163,9 @@ const isGroupEnabled = (name: string) => pmStore.groupStates[name] !== false
                   <i class="pi pi-eye text-xs" />
                 </button>
 
-                <!-- Delete (manage only) -->
+                <!-- Delete -->
                 <button
-                  v-if="props.canManage"
+                  v-if="props.canDelete"
                   class="rounded px-2 py-1 transition hover:bg-white/10"
                   :class="pendingDelete === prop.id ? 'text-red-400 hover:text-red-300' : 'text-slate-400 hover:text-slate-100'"
                   @mousedown.stop

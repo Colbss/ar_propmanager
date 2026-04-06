@@ -108,6 +108,19 @@ RegisterNetEvent('ar_propmanager:saveProp', function(data)
         group.props[id] = propData
         broadcastPropAdded(id, propData, data.group)
 
+        if getPlayerLevel(src) < 2 then
+            local identifier = getIdentifier(src)
+            if identifier then
+                MySQL.query(
+                    [[UPDATE `ar_props_player_access`
+                      SET `groups` = JSON_ARRAY_APPEND(`groups`, '$', ?)
+                      WHERE `identifier` = ? AND NOT JSON_CONTAINS(`groups`, JSON_QUOTE(?))
+                    ]],
+                    { data.group, identifier, data.group }
+                )
+            end
+        end
+
         CreateLog(src, locale('logs_new_prop_title'), locale('logs_new_prop_description'), {
             id = id,
             model = data.model,

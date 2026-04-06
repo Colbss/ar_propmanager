@@ -48,60 +48,67 @@ RegisterNUICallback('PlaceProp', function(data, cb)
     local model = data.model
     if not model or model == '' then cb('error') return end
 
-    local modelHash = GetHashKey(model)
+    lib.callback('ar_propmanager:canUseGroup', false, function(canUse)
+        if not canUse then
+            cb({ error = 'group_exists_no_access' })
+            return
+        end
 
-    RequestModel(modelHash)
-    local timeout = 0
-    while not HasModelLoaded(modelHash) and timeout < 100 do
-        Wait(10)
-        timeout = timeout + 1
-    end
+        local modelHash = GetHashKey(model)
 
-    if not HasModelLoaded(modelHash) then
+        RequestModel(modelHash)
+        local timeout = 0
+        while not HasModelLoaded(modelHash) and timeout < 100 do
+            Wait(10)
+            timeout = timeout + 1
+        end
+
+        if not HasModelLoaded(modelHash) then
+            SetModelAsNoLongerNeeded(modelHash)
+            cb({ error = 'invalid_model' })
+            return
+        end
+
+        local ped     = PlayerPedId()
+        local pos     = GetEntityCoords(ped)
+        local heading = GetEntityHeading(ped)
+
+        local prop = CreateObjectNoOffset(
+            modelHash,
+            pos.x + math.sin(math.rad(-heading)) * 3.0,
+            pos.y + math.cos(math.rad(-heading)) * 3.0,
+            pos.z,
+            false, false, false
+        )
+
         SetModelAsNoLongerNeeded(modelHash)
-        cb({ error = 'invalid_model' })
-        return
-    end
+        FreezeEntityPosition(prop, true)
+        SetEntityCollision(prop, false, false)
 
-    local ped     = PlayerPedId()
-    local pos     = GetEntityCoords(ped)
-    local heading = GetEntityHeading(ped)
+        local propMeta = {
+            model          = model,
+            group          = data.group or 'default',
+            renderDistance = data.renderDistance or 200,
+            expiresAt      = data.expiresAt,
+        }
 
-    local prop = CreateObjectNoOffset(
-        modelHash,
-        pos.x + math.sin(math.rad(-heading)) * 3.0,
-        pos.y + math.cos(math.rad(-heading)) * 3.0,
-        pos.z,
-        false, false, false
-    )
+        ClosePropManager()
+        OpenGizmo(prop, { zones = playerZones }, function(position, quaternion)
+            TriggerServerEvent('ar_propmanager:saveProp', {
+                model          = propMeta.model,
+                position       = position,
+                quaternion     = quaternion,
+                group          = propMeta.group,
+                renderDistance = propMeta.renderDistance,
+                expiresAt      = propMeta.expiresAt,
+            })
+            if DoesEntityExist(prop) then DeleteEntity(prop) end
+        end, function(entity)
+            if DoesEntityExist(entity) then DeleteEntity(entity) end
+        end)
 
-    SetModelAsNoLongerNeeded(modelHash)
-    FreezeEntityPosition(prop, true)
-    SetEntityCollision(prop, false, false)
-
-    local propMeta = {
-        model          = model,
-        group          = data.group or 'default',
-        renderDistance = data.renderDistance or 200,
-        expiresAt      = data.expiresAt,
-    }
-
-    ClosePropManager()
-    OpenGizmo(prop, { zones = playerZones }, function(position, quaternion)
-        TriggerServerEvent('ar_propmanager:saveProp', {
-            model          = propMeta.model,
-            position       = position,
-            quaternion     = quaternion,
-            group          = propMeta.group,
-            renderDistance = propMeta.renderDistance,
-            expiresAt      = propMeta.expiresAt,
-        })
-        if DoesEntityExist(prop) then DeleteEntity(prop) end
-    end, function(entity)
-        if DoesEntityExist(entity) then DeleteEntity(entity) end
-    end)
-
-    cb('ok')
+        cb('ok')
+    end, data.group)
 end)
 
 RegisterNUICallback('EditProp', function(data, cb)

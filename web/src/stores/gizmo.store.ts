@@ -107,14 +107,6 @@ export const useGizmoStore = defineStore('gizmo', () => {
     useApi('ResetRotation', { method: 'POST', body: JSON.stringify({}) }, undefined, {})
   }
 
-  const finish = () => {
-    useApi('Finish', { method: 'POST', body: JSON.stringify({}) }, undefined, {})
-  }
-
-  const cancel = () => {
-    useApi('Cancel', { method: 'POST', body: JSON.stringify({}) }, undefined, {})
-  }
-
   return {
     isVisible,
     editorMode,
@@ -131,8 +123,6 @@ export const useGizmoStore = defineStore('gizmo', () => {
     transformEntity,
     snapToGround,
     resetRotation,
-    finish,
-    cancel,
     zones,
     zonesDrawn,
     isPositionValid,
