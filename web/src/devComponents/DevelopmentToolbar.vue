@@ -10,7 +10,6 @@ const debugData = (data: any) => {
 
 const testGizmo = () => {
   pmStore.isVisible = true
-  // Short delay so the canvas is visible before we send the camera/entity events
   setTimeout(() => {
     debugData({
       action: 'setCameraPosition',

@@ -9,9 +9,7 @@ const props = defineProps<{ canManage: boolean; canEdit: boolean; canTeleport: b
 const pmStore = usePropManagerStore()
 const { locales: l } = storeToRefs(useLocaleStore())
 
-// ─── Group collapse state (persisted in store) ────────────────────────────────
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ------------------------------------------------------------------
 
 type PropPosition = { x: number; y: number; z: number }
 

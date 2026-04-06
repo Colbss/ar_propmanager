@@ -13,11 +13,11 @@ const localeStore = useLocaleStore()
 const { locales: l } = storeToRefs(localeStore)
 const { t } = localeStore
 
-// ─── Restricted view (level 0) ────────────────────────────────────────────────
+// --- Restricted view (level 0) ------------------------------------------------
 
 const myEntry = computed(() => store.entries[0] ?? null)
 
-// ─── Form state ───────────────────────────────────────────────────────────────
+// --- Form state ---------------------------------------------------------------
 
 const showForm = ref(false)
 const editingId = ref<number | null>(null)
@@ -81,7 +81,7 @@ const addDraftZone = () => {
   form.draftZone = []
 }
 
-// ─── Online player picker ─────────────────────────────────────────────────────
+// --- Online player picker -----------------------------------------------------
 
 const playerSearch = ref('')
 
@@ -99,7 +99,7 @@ const selectPlayer = (p: OnlinePlayer) => {
   playerSearch.value = ''
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 const toggleGroup = (g: string) => {
   const idx = form.groups.indexOf(g)
@@ -135,7 +135,7 @@ const submitForm = () => {
   cancelForm()
 }
 
-// ─── Confirm delete ───────────────────────────────────────────────────────────
+// --- Confirm delete -----------------------------------------------------------
 
 const pendingDelete = ref<number | null>(null)
 
@@ -150,7 +150,7 @@ const requestDelete = (id: number) => {
 </script>
 
 <template>
-  <!-- ─── Restricted access view (level 0) ──────────────────────────────────── -->
+  <!-- --- Restricted access view (level 0) ------------------------------------ -->
   <div v-if="props.level === 0" class="flex min-h-[50vh] flex-col">
     <div class="flex items-center gap-2 border-b border-white/10 px-4 py-2.5">
       <i class="pi pi-lock text-amber-400 text-xs" />
@@ -195,7 +195,7 @@ const requestDelete = (id: number) => {
     </div>
   </div>
 
-  <!-- ─── Full management view (level >= 3) ─────────────────────────────────── -->
+  <!-- --- Full management view (level >= 3) ----------------------------------- -->
   <div v-else class="flex min-h-[50vh] flex-col" @mousedown="pendingDelete = null">
     <!-- Toolbar -->
     <div class="flex items-center justify-between border-b border-white/10 px-4 py-2">

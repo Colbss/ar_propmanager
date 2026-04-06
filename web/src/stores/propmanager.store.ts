@@ -17,11 +17,6 @@ export const usePropManagerStore = defineStore('propManager', () => {
   const isVisible = ref(false)
   const props = ref<PropEntry[]>([])
   const groupStates = ref<Record<string, boolean>>({})
-
-  // ─── Group collapse state ─────────────────────────────────────────────────
-  // Persists across tab switches and window open/close.
-  // Inactive groups are auto-collapsed the first time they are seen.
-
   const collapsedGroups = ref(new Set<string>())
   const seenGroups = ref(new Set<string>())
 
@@ -88,5 +83,19 @@ export const usePropManagerStore = defineStore('propManager', () => {
       })
   }
 
-  return { isVisible, props, groupStates, groups, collapsedGroups, applyGroupDefaults, toggleCollapsed, teleport, editProp, outline, outlineAll, deleteProp, toggleGroup }
+  return { 
+    isVisible, 
+    props, 
+    groupStates, 
+    groups, 
+    collapsedGroups, 
+    applyGroupDefaults, 
+    toggleCollapsed, 
+    teleport, 
+    editProp, 
+    outline, 
+    outlineAll, 
+    deleteProp, 
+    toggleGroup 
+  }
 })

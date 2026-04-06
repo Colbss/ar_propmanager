@@ -14,7 +14,7 @@ const keybindDisplay = computed(() => [
   { key: l.value.ui_keybind_cancel_key, desc: l.value.ui_keybind_cancel },
 ])
 
-// ─── Local editable state ─────────────────────────────────────────────────────
+// --- Local editable state -----------------------------------------------------
 
 type Vec3Fields = { x: string; y: string; z: string }
 
@@ -43,7 +43,7 @@ watch(
   { deep: true }
 )
 
-// ─── Commit helpers ───────────────────────────────────────────────────────────
+// --- Commit helpers -----------------------------------------------------------
 
 function commit() {
   const px = parseFloat(localPos.x)
@@ -82,7 +82,7 @@ function onEscape(
   ;(el as HTMLInputElement | null)?.blur()
 }
 
-// ─── Copy / Paste ─────────────────────────────────────────────────────────────
+// --- Copy / Paste -------------------------------------------------------------
 
 let posBuffer: Vec3Fields | null = null
 let rotBuffer: Vec3Fields | null = null
@@ -110,7 +110,7 @@ function pasteVec(target: Vec3Fields, fmt: (n: number) => string, type: 'pos' | 
     <div v-if="gizmoStore.isVisible" class="pointer-events-none absolute inset-0 z-10 flex justify-center">
       <div class="relative w-full max-w-[200vh]">
 
-      <!-- ── Left middle: Transform + Controls ─────────────────────────── -->
+      <!-- -- Left middle: Transform + Controls --------------------------- -->
       <div class="pointer-events-auto absolute left-8 top-1/2 flex w-52 -translate-y-1/2 flex-col gap-3 rounded-lg border border-white/10 bg-black/75 p-3 text-white">
 
         <!-- Position -->

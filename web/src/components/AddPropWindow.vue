@@ -14,7 +14,7 @@ const localeStore  = useLocaleStore()
 const { locales: l } = storeToRefs(localeStore)
 const { t } = localeStore
 
-// ─── Prop list ────────────────────────────────────────────────────────────────
+// --- Prop list ----------------------------------------------------------------
 
 const PROP_LIST_URL = 'https://raw.githubusercontent.com/DurtyFree/gta-v-data-dumps/refs/heads/master/ObjectList.ini'
 
@@ -51,7 +51,7 @@ onMounted(async () => {
   listLoading.value = false
 })
 
-// ─── Fuzzy search ─────────────────────────────────────────────────────────────
+// --- Fuzzy search -------------------------------------------------------------
 
 const searchQuery = ref('')
 const showResults = ref(false)
@@ -100,7 +100,7 @@ const onBlur = () => {
   setTimeout(() => { showResults.value = false }, 150)
 }
 
-// ─── Form state ───────────────────────────────────────────────────────────────
+// --- Form state ---------------------------------------------------------------
 
 const existingGroups = computed(() =>
   addPropStore.allowedGroups.length > 0
@@ -115,7 +115,7 @@ const form = reactive({
   expiresAt:      '',
 })
 
-// ─── Group dropdown ───────────────────────────────────────────────────────────
+// --- Group dropdown -----------------------------------------------------------
 
 const showGroupResults = ref(false)
 
@@ -144,7 +144,7 @@ function formatExpiry(seconds: number): string {
   return `${Math.round(seconds / 86400)} day${Math.round(seconds / 86400) !== 1 ? 's' : ''}`
 }
 
-// ─── Submit ───────────────────────────────────────────────────────────────────
+// --- Submit -------------------------------------------------------------------
 
 const placing = ref(false)
 const error   = ref('')
@@ -233,7 +233,7 @@ const place = async () => {
       </p>
     </div>
 
-    <!-- Group + Render distance (2-col) -->
+    <!-- Group + Render distance -->
     <div class="grid grid-cols-2 gap-3">
       <div class="flex flex-col gap-1.5">
         <label class="text-xs font-medium text-slate-400">{{ l.ui_group_label }}</label>

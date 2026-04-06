@@ -1,8 +1,6 @@
 local config = require 'config'
 lib.locale()
 
--- ─── Group toggle ─────────────────────────────────────────────────────────────
-
 --- Enable or disable a prop group, persisting the change to the database and broadcasting to all clients.
 --- No-ops if the group does not exist or the state is already set.
 --- @param  groupName  string   Group name
@@ -58,7 +56,7 @@ RegisterNetEvent('ar_propmanager:saveProp', function(data)
     end
 
     if data.id then
-        -- ── Update existing prop transform ────────────────────────────────────
+        -- Update existing prop transform
         local group = groups[data.group]
         if not group then return end
         local propData = group.props[data.id]
@@ -86,7 +84,7 @@ RegisterNetEvent('ar_propmanager:saveProp', function(data)
             expires_at = propData.expiresAt,
         })
     else
-        -- ── New prop ──────────────────────────────────────────────────────────
+        -- New prop
         local group = getOrCreateGroup(data.group)
 
         local propData = {

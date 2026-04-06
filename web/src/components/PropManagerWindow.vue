@@ -20,7 +20,7 @@ const emit = defineEmits<{
   close: []
 }>()
 
-// ─── Draggable window ─────────────────────────────────────────────────────────
+// --- Draggable window ---------------------------------------------------------
 
 const titleBar = ref<HTMLElement | null>(null)
 const windowEl = ref<HTMLElement | null>(null)
@@ -78,7 +78,7 @@ const visibleTabs = computed(() =>
         </button>
       </div>
 
-      <!-- Tab strip (hidden when only one tab is visible) -->
+      <!-- Tab strip -->
       <div v-if="visibleTabs.length > 1" class="flex border-b border-white/10 bg-white/3">
         <button
           v-for="tab in visibleTabs"
@@ -107,8 +107,8 @@ const visibleTabs = computed(() =>
           v-else-if="activeTab === 'add-prop'"
           @done="emit('update:activeTab', 'props')"
         />
-        <PropMapWindow      v-else-if="activeTab === 'map'"         />
-        <PlayerAccessWindow v-else                                   :level="level" />
+        <PropMapWindow      v-else-if="activeTab === 'map'" />
+        <PlayerAccessWindow v-else :level="level" />
       </div>
     </div>
 </template>

@@ -8,8 +8,6 @@ const props = defineProps<{
   height?: string
 }>()
 
-// ─── GTA V ↔ Leaflet coordinate conversion ───────────────────────────────────
-
 const MAP_CENTER: [number, number] = [-119.43, 58.84]
 const LAT_PER_100 = 1.421
 
@@ -20,7 +18,7 @@ function gameToMap(x: number, y: number): [number, number] {
   ]
 }
 
-// ─── State ────────────────────────────────────────────────────────────────────
+// --- State --------------------------------------------------------------------
 
 const mapContainer = ref<HTMLElement | null>(null)
 let L: typeof import('leaflet') | null = null
@@ -29,7 +27,7 @@ let shapes: Polygon[] = []
 
 const TILE_URL = 'https://s.rsg.sc/sc/images/games/GTAV/map/game/{z}/{x}/{y}.jpg'
 
-// ─── Leaflet bootstrap ────────────────────────────────────────────────────────
+// --- Leaflet bootstrap --------------------------------------------------------
 
 async function initMap() {
   if (!mapContainer.value) return
@@ -69,7 +67,7 @@ async function initMap() {
   map.invalidateSize()
 }
 
-// ─── Drawing ──────────────────────────────────────────────────────────────────
+// --- Drawing ------------------------------------------------------------------
 
 function redraw() {
   if (!L || !map) return
@@ -99,7 +97,7 @@ function redraw() {
   if (combinedBounds) map.fitBounds(combinedBounds, { padding: [24, 24] })
 }
 
-// ─── Lifecycle ────────────────────────────────────────────────────────────────
+// --- Lifecycle ----------------------------------------------------------------
 
 watch(
   () => mapContainer.value,

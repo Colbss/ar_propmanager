@@ -14,11 +14,11 @@ const localeStore = useLocaleStore()
 const cameraRef = shallowRef<THREE.PerspectiveCamera | null>(null)
 const meshRef = shallowRef<THREE.Mesh | null>(null)
 
-// ─── Coordinate helpers ───────────────────────────────────────────────────────
+// --- Coordinate helpers -------------------------------------------------------
 // FiveM uses Z-up; Three.js uses Y-up.
-// FiveM → Three.js:  (x, y, z) → (x, z, -y)
-// Three.js → FiveM:  (x, y, z) → (x, -z, y)
-// Quaternion → FiveM: (x, y, z, w) → (x, -z, y, w)
+// FiveM -> Three.js:  (x, y, z) -> (x, z, -y)
+// Three.js -> FiveM:  (x, y, z) -> (x, -z, y)
+// Quaternion -> FiveM: (x, y, z, w) -> (x, -z, y, w)
 
 function syncDisplay() {
   const mesh = meshRef.value
@@ -44,7 +44,7 @@ function handleObjectChange() {
   syncDisplay()
 }
 
-// ─── NUI Events ───────────────────────────────────────────────────────────────
+// --- NUI Events ---------------------------------------------------------------
 
 useNuiEvent<{
   position: { x: number; y: number; z: number }
@@ -114,9 +114,9 @@ useNuiEvent('toggleMode', () => {
   gizmoStore.toggleEditorMode()
 })
 
-// ─── Manual transform input ───────────────────────────────────────────────────
+// --- Manual transform input ---------------------------------------------------
 
-// Reverse of syncDisplay: FiveM (rx,ry,rz) degrees → Three.js Euler 'YZX'
+// Reverse of syncDisplay: FiveM (rx,ry,rz) degrees -> Three.js Euler 'YZX'
 // From syncDisplay: fivem.x=deg(e.x), fivem.y=deg(-e.z), fivem.z=deg(e.y)
 // So:               e.x=rad(fivem.x),  e.z=-rad(fivem.y), e.y=rad(fivem.z)
 watch(

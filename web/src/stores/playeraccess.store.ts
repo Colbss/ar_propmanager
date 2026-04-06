@@ -75,5 +75,15 @@ export const usePlayerAccessStore = defineStore('playerAccess', () => {
       })
   }
 
-  return { isVisible, entries, availableGroups, onlinePlayers, loadingPlayers, loadOnlinePlayers, addEntry, updateEntry, deleteEntry }
+  return { 
+    isVisible, 
+    entries, 
+    availableGroups, 
+    onlinePlayers, 
+    loadingPlayers, 
+    loadOnlinePlayers, 
+    addEntry, 
+    updateEntry, 
+    deleteEntry 
+  }
 })

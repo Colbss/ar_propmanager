@@ -5,7 +5,7 @@ import { useLocaleStore } from '../stores/locale.store'
 import type { Map as LeafletMap, CircleMarker, Polygon } from 'leaflet'
 import type { Zone } from '../stores/playeraccess.store'
 
-// ─── Props / emits ────────────────────────────────────────────────────────────
+// --- Props / emits ------------------------------------------------------------
 
 const props = defineProps<{
   modelValue: Array<{ x: number; y: number }>
@@ -17,7 +17,7 @@ const emit = defineEmits<{
   'delete-zone': [index: number]
 }>()
 
-// ─── GTA V ↔ Leaflet coordinate conversion ───────────────────────────────────
+// --- GTA V <-> Leaflet coordinate conversion -----------------------------------
 
 const MAP_CENTER: [number, number] = [-119.43, 58.84]
 const LAT_PER_100 = 1.421
@@ -37,7 +37,7 @@ function mapToGame(lat: number, lng: number): { x: number; y: number } {
   }
 }
 
-// ─── State ────────────────────────────────────────────────────────────────────
+// --- State --------------------------------------------------------------------
 
 const mapContainer = ref<HTMLElement | null>(null)
 const hoverCoords  = ref<{ x: number; y: number } | null>(null)
@@ -59,7 +59,7 @@ function commitPoints() {
   emit('update:modelValue', [...points.value])
 }
 
-// ─── Leaflet bootstrap ────────────────────────────────────────────────────────
+// --- Leaflet bootstrap --------------------------------------------------------
 
 const TILE_URL = 'https://s.rsg.sc/sc/images/games/GTAV/map/game/{z}/{x}/{y}.jpg'
 
@@ -118,7 +118,7 @@ function onMapMouseMove(e: import('leaflet').LeafletMouseEvent) {
   hoverCoords.value = mapToGame(e.latlng.lat, e.latlng.lng)
 }
 
-// ─── Drawing ──────────────────────────────────────────────────────────────────
+// --- Drawing ------------------------------------------------------------------
 
 function redrawDraft() {
   if (!L || !map) return
@@ -187,7 +187,7 @@ function redrawSaved() {
   })
 }
 
-// ─── Actions ──────────────────────────────────────────────────────────────────
+// --- Actions ------------------------------------------------------------------
 
 const undoLast = () => {
   if (points.value.length === 0) return
@@ -202,7 +202,7 @@ const clearAll = () => {
   commitPoints()
 }
 
-// ─── Lifecycle ────────────────────────────────────────────────────────────────
+// --- Lifecycle ----------------------------------------------------------------
 
 watch(
   () => mapContainer.value,

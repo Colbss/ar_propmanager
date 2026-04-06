@@ -14,12 +14,12 @@ import { usePropManagerStore, type PropEntry } from '../stores/propmanager.store
 const store = usePropManagerStore()
 const { locales: l } = storeToRefs(useLocaleStore())
 
-// ─── Mode ─────────────────────────────────────────────────────────────────────
+// --- Mode ---------------------------------------------------------------------
 
 type Mode = 'clusters' | 'heatmap'
 const mode = ref<Mode>('clusters')
 
-// ─── Selection ────────────────────────────────────────────────────────────────
+// --- Selection ----------------------------------------------------------------
 
 const selected        = ref<PropEntry | null>(null)
 const selectedCluster = ref<PropEntry[]>([])
@@ -29,11 +29,11 @@ function clearSelection() {
   selectedCluster.value = []
 }
 
-// ─── Outline all ─────────────────────────────────────────────────────────────
+// --- Outline all -------------------------------------------------------------
 
 const allOutlined = computed(() => store.props.length > 0 && store.props.every((p) => p.outlined))
 
-// ─── GTA V ↔ Leaflet coordinate conversion ───────────────────────────────────
+// --- GTA V <-> Leaflet coordinate conversion -----------------------------------
 
 const MAP_CENTER: [number, number] = [-119.43, 58.84]
 const LAT_PER_100 = 1.421
@@ -45,7 +45,7 @@ function gameToMap(x: number, y: number): [number, number] {
   ]
 }
 
-// ─── Map setup ────────────────────────────────────────────────────────────────
+// --- Map setup ----------------------------------------------------------------
 
 const mapContainer = ref<HTMLElement | null>(null)
 
@@ -93,7 +93,7 @@ async function initMap() {
   buildLayers()
 }
 
-// ─── Layer builders ───────────────────────────────────────────────────────────
+// --- Layer builders -----------------------------------------------------------
 
 function clearLayers() {
   if (clusterGroup) { map?.removeLayer(clusterGroup); clusterGroup = null }
@@ -200,7 +200,7 @@ function buildLayers() {
   }
 }
 
-// ─── Reactivity ───────────────────────────────────────────────────────────────
+// --- Reactivity ---------------------------------------------------------------
 
 watch(() => store.props, () => { if (map) buildLayers() }, { deep: true })
 watch(mode, () => { if (map) buildLayers() })
@@ -217,7 +217,7 @@ onUnmounted(() => {
   map = null
 })
 
-// ─── Actions ──────────────────────────────────────────────────────────────────
+// --- Actions ------------------------------------------------------------------
 
 const deleteSelected = () => {
   if (!selected.value) return
@@ -279,10 +279,10 @@ const deleteFromCluster = (prop: PropEntry) => {
     <!-- Map -->
     <div ref="mapContainer" class="flex-1 w-full" />
 
-    <!-- Selection panel (above footer, only when something is selected) -->
+    <!-- Selection panel -->
     <div v-if="(selected || selectedCluster.length > 0) && mode === 'clusters'" class="border-t border-white/10">
 
-      <!-- Cluster header (only shown when multiple props selected) -->
+      <!-- Cluster header -->
       <div
         v-if="selectedCluster.length > 0"
         class="flex items-center justify-between border-b border-white/5 px-4 py-1.5"
@@ -291,7 +291,7 @@ const deleteFromCluster = (prop: PropEntry) => {
         <button class="text-xs text-slate-600 transition hover:text-slate-400" @click="clearSelection">✕</button>
       </div>
 
-      <!-- Prop rows - single selected prop or cluster list, same layout -->
+      <!-- Prop rows -->
       <div class="max-h-[10vh] overflow-y-auto">
         <div
           v-for="prop in selected ? [selected] : selectedCluster"
@@ -325,7 +325,7 @@ const deleteFromCluster = (prop: PropEntry) => {
 </template>
 
 <style>
-/* ── Cluster marker icons ──────────────────────────────────────────────────── */
+/* -- Cluster marker icons ---------------------------------------------------- */
 
 .pm-cluster {
   background: rgba(59, 130, 246, 0.85);
@@ -346,13 +346,13 @@ const deleteFromCluster = (prop: PropEntry) => {
   box-shadow: 0 0 0 3px rgba(217, 70, 239, 0.3), 0 0 0 6px rgba(217, 70, 239, 0.12);
 }
 
-/* ── Selected single marker glow ──────────────────────────────────────────── */
+/* -- Selected single marker glow -------------------------------------------- */
 
 .pm-selected-marker {
   filter: drop-shadow(0 0 5px rgba(217, 70, 239, 0.9));
 }
 
-/* ── Leaflet tooltip - dark theme ─────────────────────────────────────────── */
+/* -- Leaflet tooltip - dark theme ------------------------------------------- */
 
 .leaflet-tooltip {
   background: rgba(10, 16, 28, 0.95) !important;
@@ -368,7 +368,7 @@ const deleteFromCluster = (prop: PropEntry) => {
   border-top-color: rgba(10, 16, 28, 0.95) !important;
 }
 
-/* ── Markercluster animation ──────────────────────────────────────────────── */
+/* -- Markercluster animation ------------------------------------------------ */
 
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow {
