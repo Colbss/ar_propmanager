@@ -89,8 +89,8 @@ RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
     if existing and #existing > 0 then return end
 
     local id = MySQL.insert.await(
-        'INSERT INTO `ar_props_player_access` (identifier,name,groups,zones) VALUES (?,?,?,?)',
-        { data.identifier, data.name, json.encode(data.groups or {}), json.encode(data.zones or {}) }
+        'INSERT INTO `ar_props_player_access` (identifier,name,groups,zones,max_expiry) VALUES (?,?,?,?,?)',
+        { data.identifier, data.name, json.encode(data.groups or {}), json.encode(data.zones or {}), data.maxExpiry }
     )
 
     TriggerClientEvent('ar_propmanager:playerAccessSaved', src, {
@@ -99,6 +99,7 @@ RegisterNetEvent('ar_propmanager:addPlayerAccess', function(data)
         name       = data.name,
         groups     = data.groups or {},
         zones      = data.zones or {},
+        maxExpiry  = data.maxExpiry,
     })
 
     CreateLog(src, locale('logs_add_player_access_title'), locale('logs_add_player_access_description'), {
@@ -114,8 +115,8 @@ RegisterNetEvent('ar_propmanager:updatePlayerAccess', function(data)
     if getPlayerLevel(src) < 3 then return end
 
     MySQL.query(
-        'UPDATE `ar_props_player_access` SET identifier=?,name=?,groups=?,zones=? WHERE id=?',
-        { data.identifier, data.name, json.encode(data.groups or {}), json.encode(data.zones or {}), data.id }
+        'UPDATE `ar_props_player_access` SET identifier=?,name=?,groups=?,zones=?,max_expiry=? WHERE id=?',
+        { data.identifier, data.name, json.encode(data.groups or {}), json.encode(data.zones or {}), data.maxExpiry, data.id }
     )
 
     CreateLog(src, locale('logs_update_player_access_title'), locale('logs_update_player_access_description'), {

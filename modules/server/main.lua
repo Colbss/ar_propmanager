@@ -237,6 +237,7 @@ local function createTables()
             `name`       VARCHAR(64) NOT NULL,
             `groups`     JSON        NOT NULL,
             `zones`      JSON        NULL,
+            `max_expiry` BIGINT      NULL,
             PRIMARY KEY (`id`),
             INDEX `idx_identifier` (`identifier`)
         )
