@@ -64,6 +64,9 @@ async function initMap() {
   L.control.zoom({ position: 'bottomright' }).addTo(map)
 
   redraw()
+
+  await nextTick()
+  map.invalidateSize()
 }
 
 // ─── Drawing ──────────────────────────────────────────────────────────────────
@@ -113,7 +116,15 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="overflow-hidden rounded border border-white/10 bg-black/30">
-    <div ref="mapContainer" :style="{ height: height ?? '18vh' }" class="w-full" />
+  <div
+    class="overflow-hidden rounded border border-white/10 bg-black/30"
+    :class="height ? '' : 'flex flex-1 flex-col min-h-0'"
+  >
+    <div
+      ref="mapContainer"
+      class="w-full"
+      :class="height ? '' : 'flex-1'"
+      :style="height ? { height } : {}"
+    />
   </div>
 </template>

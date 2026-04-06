@@ -157,7 +157,7 @@ const requestDelete = (id: number) => {
       <span class="text-xs font-semibold text-amber-300">{{ l.ui_restricted_access }}</span>
     </div>
 
-    <div v-if="myEntry" class="flex flex-col gap-3 p-4">
+    <div v-if="myEntry" class="flex flex-1 flex-col gap-3 p-4">
       <p class="text-xs text-slate-400">
         {{ l.ui_restricted_desc }}
       </p>
@@ -182,11 +182,11 @@ const requestDelete = (id: number) => {
         <span class="text-xs text-amber-300">{{ t('ui_forced_expiry_player_desc', formatExpiry(myEntry.maxExpiry)) }}</span>
       </div>
 
-      <!-- Zones -->
-      <div class="flex flex-col gap-1">
+      <!-- Zones — grows to fill whatever space remains -->
+      <div class="flex min-h-0 flex-1 flex-col gap-1">
         <span class="text-xs text-slate-500">{{ l.ui_zone_restrictions }}</span>
         <div v-if="!myEntry.zones.length" class="text-xs text-slate-400">{{ l.ui_no_zone_restriction }}</div>
-        <MapAreaViewer v-else :zones="myEntry.zones" height="35vh" />
+        <MapAreaViewer v-else :zones="myEntry.zones" />
       </div>
     </div>
 
