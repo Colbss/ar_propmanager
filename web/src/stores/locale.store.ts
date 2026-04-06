@@ -69,6 +69,9 @@ const DEFAULTS: UILocales = {
   ui_gizmo_toggle_space:  'Toggle Axis Space',
   ui_gizmo_snap_ground:   'Snap To Ground',
   ui_gizmo_reset_rotation:'Reset Rotation',
+  ui_gizmo_zone_valid:    'In Zone',
+  ui_gizmo_zone_invalid:  'Outside Zone',
+  ui_gizmo_toggle_zones:  'Toggle Zones',
 
   // PropMapWindow
   ui_map_clusters:      'Clusters',

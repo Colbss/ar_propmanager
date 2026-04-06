@@ -26,7 +26,11 @@ keybinds.finish = lib.addKeybind({
     name        = 'gizmo_finish',
     description = string.format('~b~%s~w~', locale('keybind_finish')),
     defaultKey  = 'E',
-    onPressed   = function() if CloseGizmo then CloseGizmo(true) end end,
+    onPressed   = function()
+        if not CloseGizmo then return end
+        if not IsZonePlacementValid() then return end
+        CloseGizmo(true)
+    end,
 })
 keybinds.finish:disable(true)
 
@@ -47,6 +51,9 @@ local currentGizmoEntity = nil
 local hasFocus           = false
 local gizmoOnFinish      = nil
 local gizmoOnCancel      = nil
+local gizmoZones         = {}
+local camPosInterval     = nil
+local zoneDrawInterval   = nil
 
 local disabledControls = {
     23,     -- Enter
@@ -58,6 +65,68 @@ local disabledControls = {
     143,    -- MeleeAttack
     263     -- MeleeAttackAlt
 }
+
+--- Returns true if the 2D point (px, py) is inside any of the active gizmo zones.
+--- Returns true when gizmoZones is empty (unrestricted).
+--- @param  px  number
+--- @param  py  number
+--- @return boolean
+local function isPointInZones(px, py)
+    if #gizmoZones == 0 then return true end
+    for _, zone in ipairs(gizmoZones) do
+        local n = #zone
+        local inside = false
+        local j = n
+        for i = 1, n do
+            local xi, yi = zone[i].x, zone[i].y
+            local xj, yj = zone[j].x, zone[j].y
+            if ((yi > py) ~= (yj > py)) and (px < (xj - xi) * (py - yi) / (yj - yi) + xi) then
+                inside = not inside
+            end
+            j = i
+        end
+        if inside then return true end
+    end
+    return false
+end
+
+--- Checks if the current gizmo entity is within any of the active zones. If not, shows an error notification.
+--- @return boolean
+function IsZonePlacementValid()
+    if currentGizmoEntity and DoesEntityExist(currentGizmoEntity) then
+        local pos = GetEntityCoords(currentGizmoEntity)
+        if not isPointInZones(pos.x, pos.y) then
+            lib.notify({ description = locale('gizmo_outside_zone'), type = 'error' })
+            return false
+        end
+    end
+    return true
+end
+
+--- Draw all active zones 
+--- @return nil
+local function drawZonePolygons()
+    for _, zone in ipairs(gizmoZones) do
+        local n = #zone
+        if n < 3 then goto continue end
+        for i = 1, n do
+            local p1 = zone[i]
+            local p2 = zone[(i % n) + 1]
+            DrawPoly(p1.x, p1.y, 0, p2.x, p2.y, 0,    p2.x, p2.y, 1000, 0, 200, 255, 80)
+            DrawPoly(p1.x, p1.y, 0, p2.x, p2.y, 1000, p1.x, p1.y, 1000, 0, 200, 255, 80)
+        end
+        ::continue::
+    end
+end
+
+--- Start the dedicated zone-draw interval. No-ops if already running.
+--- @return nil
+local function startZoneDraw()
+    if zoneDrawInterval then return end
+    zoneDrawInterval = SetInterval(function()
+        drawZonePolygons()
+    end)
+end
 
 --- Toggle NUI focus for the gizmo, optionally overriding the current state.
 --- @param  override boolean|nil  true = focused, false = unfocused, nil = toggle
@@ -99,6 +168,7 @@ function OpenGizmo(entity, options, onFinish, onCancel)
     currentGizmoEntity = entity
     gizmoOnFinish      = onFinish
     gizmoOnCancel      = onCancel
+    gizmoZones         = options.zones or {}
 
     local pos             = GetEntityCoords(entity)
     local qx, qy, qz, qw = GetEntityQuaternion(entity)
@@ -115,6 +185,7 @@ function OpenGizmo(entity, options, onFinish, onCancel)
             position             = { x = pos.x, y = pos.y, z = pos.z },
             quaternion           = { x = qx, y = qy, z = qz, w = qw },
             restrictRotationAxes = options.restrictRotationAxes or false,
+            zones                = gizmoZones,
             locales              = BuildUILocales(),
         },
     })
@@ -130,22 +201,18 @@ function OpenGizmo(entity, options, onFinish, onCancel)
         return
     end
 
-    CreateThread(function()
-        lib.disableControls:Add(disabledControls)
-        while gizmoActive do
-            lib.disableControls()
-            local camPos = GetGameplayCamCoords()
-            local camRot = GetGameplayCamRot(2)
-            SendNUIMessage({
-                action = 'setCameraPosition',
-                data   = {
-                    position = { x = camPos.x, y = camPos.y, z = camPos.z },
-                    rotation = { x = camRot.x, y = camRot.y, z = camRot.z },
-                },
-            })
-            Wait(0)
-        end
-        lib.disableControls:Remove(disabledControls)
+    lib.disableControls:Add(disabledControls)
+    camPosInterval = SetInterval(function()
+        lib.disableControls()
+        local camPos = GetGameplayCamCoords()
+        local camRot = GetGameplayCamRot(2)
+        SendNUIMessage({
+            action = 'setCameraPosition',
+            data   = {
+                position = { x = camPos.x, y = camPos.y, z = camPos.z },
+                rotation = { x = camRot.x, y = camRot.y, z = camRot.z },
+            },
+        })
     end)
 end
 
@@ -172,6 +239,18 @@ function CloseGizmo(save)
     currentGizmoEntity = nil
     gizmoOnFinish      = nil
     gizmoOnCancel      = nil
+    gizmoZones         = {}
+
+    if camPosInterval then
+        ClearInterval(camPosInterval)
+        camPosInterval = nil
+        lib.disableControls:Remove(disabledControls)
+    end
+
+    if zoneDrawInterval then
+        ClearInterval(zoneDrawInterval)
+        zoneDrawInterval = nil
+    end
 
     if save then
         if entity and DoesEntityExist(entity) then
@@ -261,12 +340,26 @@ RegisterNUICallback('ResetRotation', function(_, cb)
 end)
 
 RegisterNUICallback('Finish', function(_, cb)
+    if not IsZonePlacementValid() then 
+        cb('ok')
+        return 
+    end
     CloseGizmo(true)
     cb('ok')
 end)
 
 RegisterNUICallback('Cancel', function(_, cb)
     CloseGizmo(false)
+    cb('ok')
+end)
+
+RegisterNUICallback('ToggleZoneDraw', function(_, cb)
+    if zoneDrawInterval then
+        ClearInterval(zoneDrawInterval)
+        zoneDrawInterval = nil
+    else
+        startZoneDraw()
+    end
     cb('ok')
 end)
                                             

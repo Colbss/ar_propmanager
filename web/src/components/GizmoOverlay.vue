@@ -184,6 +184,28 @@ function pasteVec(target: Vec3Fields, fmt: (n: number) => string, type: 'pos' | 
           <button class="rounded bg-white/10 px-3 py-1.5 text-xs text-white transition-colors hover:bg-white/20" @click="gizmoStore.resetRotation()">{{ l.ui_gizmo_reset_rotation }}</button>
         </div>
 
+        <!-- Zone validity  -->
+        <template v-if="gizmoStore.zones.length > 0">
+          <div class="h-px bg-white/10" />
+          <div
+            class="flex items-center gap-2 rounded px-2.5 py-2 transition-colors"
+            :class="gizmoStore.isPositionValid ? 'bg-green-500/15' : 'bg-red-500/20'"
+          >
+            <i
+              class="pi text-[0.75rem]"
+              :class="gizmoStore.isPositionValid ? 'pi-check-circle text-green-400' : 'pi-times-circle text-red-400'"
+            />
+            <span class="text-xs font-medium" :class="gizmoStore.isPositionValid ? 'text-green-300' : 'text-red-300'">
+              {{ gizmoStore.isPositionValid ? l.ui_gizmo_zone_valid : l.ui_gizmo_zone_invalid }}
+            </span>
+          </div>
+          <button
+            class="rounded px-3 py-1.5 text-xs text-white transition-colors"
+            :class="gizmoStore.zonesDrawn ? 'bg-cyan-600/50 hover:bg-cyan-600/70' : 'bg-white/10 hover:bg-white/20'"
+            @click="gizmoStore.toggleZoneDraw()"
+          >{{ l.ui_gizmo_toggle_zones }}</button>
+        </template>
+
         <div class="h-px bg-white/10" />
 
         <!-- Keybinds -->

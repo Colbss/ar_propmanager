@@ -1,5 +1,6 @@
 
-local outlinedProps = {} 
+local outlinedProps = {}
+local playerZones   = {}
 
 --- Open the prop manager NUI window with the given data payload.
 --- @param  payload { level: integer, props: table[], groupStates: table<string, boolean>, playerAccess: table[]|nil, groups: string[]|nil }
@@ -86,7 +87,7 @@ RegisterNUICallback('PlaceProp', function(data, cb)
     }
 
     ClosePropManager()
-    OpenGizmo(prop, {}, function(position, quaternion)
+    OpenGizmo(prop, { zones = playerZones }, function(position, quaternion)
         TriggerServerEvent('ar_propmanager:saveProp', {
             model          = propMeta.model,
             position       = position,
@@ -314,6 +315,12 @@ RegisterNetEvent('ar_propmanager:openPropManager', function(openData)
         for name, enabled in pairs(groupEnabled) do
             groupStates[name] = enabled
         end
+    end
+
+    if openData.level == 0 and openData.playerAccess and openData.playerAccess[1] then
+        playerZones = openData.playerAccess[1].zones or {}
+    else
+        playerZones = {}
     end
 
     local payload = {

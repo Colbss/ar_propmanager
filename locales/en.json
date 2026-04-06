@@ -5,7 +5,8 @@
     "keybind_cancel": "Cancel",
 
     "gizmo_vehicle_warning": "Gizmo cannot be used while in a vehicle",
-    "gizmo_invalid_entity": "Entit does not exist",
+    "gizmo_invalid_entity": "Entity does not exist",
+    "gizmo_outside_zone": "You cannot place a prop outside your allowed zone",
 
     "logs_new_prop_title": "Prop Placed",
     "logs_new_prop_description": "A new prop was placed",
@@ -83,6 +84,9 @@
     "ui_gizmo_toggle_space": "Toggle Axis Space",
     "ui_gizmo_snap_ground": "Snap To Ground",
     "ui_gizmo_reset_rotation": "Reset Rotation",
+    "ui_gizmo_zone_valid": "In Zone",
+    "ui_gizmo_zone_invalid": "Outside Zone",
+    "ui_gizmo_toggle_zones": "Toggle Zones",
 
     "ui_map_clusters": "Clusters",
     "ui_map_heatmap": "Heatmap",

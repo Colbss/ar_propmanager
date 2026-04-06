@@ -6,6 +6,7 @@ import { TransformControls } from '@tresjs/cientos'
 import { useNuiEvent } from '../composables/useNuiEvent'
 import { useGizmoStore } from '../stores/gizmo.store'
 import { useLocaleStore, type UILocales } from '../stores/locale.store'
+import type { Zone } from '../stores/playeraccess.store'
 
 const gizmoStore = useGizmoStore()
 const localeStore = useLocaleStore()
@@ -50,6 +51,7 @@ useNuiEvent<{
   quaternion: { x: number; y: number; z: number; w: number }
   keybinds?: { mode: { key: string; description: string }; focus: { key: string; description: string }; finish: { key: string; description: string }; cancel: { key: string; description: string } }
   restrictRotationAxes?: boolean
+  zones?: Zone[]
   locales?: UILocales
 }>('initGizmo', (entity) => {
   const mesh = meshRef.value
@@ -58,6 +60,7 @@ useNuiEvent<{
   if (entity.keybinds) gizmoStore.keys = entity.keybinds
   if (entity.locales)  localeStore.setLocales(entity.locales)
   gizmoStore.restrictRotationAxes = entity.restrictRotationAxes ?? false
+  gizmoStore.setZones(entity.zones ?? [])
 
   mesh.position.set(entity.position.x, entity.position.z, -entity.position.y)
   mesh.quaternion.set(entity.quaternion.x, entity.quaternion.z, -entity.quaternion.y, entity.quaternion.w)
@@ -80,6 +83,7 @@ useNuiEvent<{
 
 useNuiEvent('closeGizmo', () => {
   gizmoStore.isVisible = false
+  gizmoStore.setZones([])
 })
 
 useNuiEvent<{
