@@ -3,7 +3,9 @@
 
 <img src="https://i.imgur.com/PG7Tx1d.png" width="50%"><img src="https://i.imgur.com/64uxRpX.png" width="50%">
 
-Preview available on [streamable](https://streamable.com/t8yx3k)
+Elevated user preview available on [streamable](https://streamable.com/t8yx3k)
+
+Restricted user preview available on [streamable](https://streamable.com/d30vsa)
 
 ---
 
@@ -11,7 +13,7 @@ Preview available on [streamable](https://streamable.com/t8yx3k)
 
 ### Prop placement & editing
 - Live updated searchable list of props (credit [DurtyFree](https://github.com/DurtyFree/gta-v-data-dumps/blob/master/ObjectList.ini))
-- 3D gizmo for precise translate and rotate manipulation
+- 3D gizmo for precise translate and rotate manipulation (no gimbal lock!)
 - Manual coordinate input - type exact X/Y/Z position and rotation values directly in the gizmo overlay
 - Copy and paste position / rotation vectors (resource restricted)
 

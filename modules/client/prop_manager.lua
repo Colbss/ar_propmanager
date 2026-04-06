@@ -55,16 +55,10 @@ RegisterNUICallback('PlaceProp', function(data, cb)
         end
 
         local modelHash = GetHashKey(model)
-
-        RequestModel(modelHash)
-        local timeout = 0
-        while not HasModelLoaded(modelHash) and timeout < 100 do
-            Wait(10)
-            timeout = timeout + 1
-        end
-
-        if not HasModelLoaded(modelHash) then
-            SetModelAsNoLongerNeeded(modelHash)
+        local success = pcall(function()
+            lib.requestModel(model)
+        end)
+        if not success then
             cb({ error = 'invalid_model' })
             return
         end
@@ -103,8 +97,8 @@ RegisterNUICallback('PlaceProp', function(data, cb)
                 expiresAt      = propMeta.expiresAt,
             })
             if DoesEntityExist(prop) then DeleteEntity(prop) end
-        end, function(entity)
-            if DoesEntityExist(entity) then DeleteEntity(entity) end
+        end, function(e)
+            if DoesEntityExist(e) then DeleteEntity(e) end
         end)
 
         cb('ok')
@@ -124,14 +118,9 @@ RegisterNUICallback('EditProp', function(data, cb)
             return
         end
 
-        local attempts = 0
-        while not spawnedProps[id] and attempts < 20 do
-            Wait(100)
-            attempts = attempts + 1
-        end
 
-        local entity = spawnedProps[id]
-        if not entity or not DoesEntityExist(entity) then cb('error') return end
+        local editingProp = spawnedProps[id]
+        if not editingProp or not DoesEntityExist(editingProp) then cb('error') return end
 
         local propMeta = {
             dbId           = id,
@@ -141,13 +130,13 @@ RegisterNUICallback('EditProp', function(data, cb)
             expiresAt      = prop.expiresAt,
         }
 
-        local origPos             = GetEntityCoords(entity)
-        local oqx, oqy, oqz, oqw = GetEntityQuaternion(entity)
+        local origPos            = GetEntityCoords(editingProp)
+        local oqx, oqy, oqz, oqw = GetEntityQuaternion(editingProp)
 
-        SetEntityCollision(entity, false, false)
+        SetEntityCollision(editingProp, false, false)
 
         ClosePropManager()
-        OpenGizmo(entity, {}, function(position, quaternion)
+        OpenGizmo(editingProp, {}, function(position, quaternion)
             TriggerServerEvent('ar_propmanager:saveProp', {
                 id             = propMeta.dbId,
                 model          = propMeta.model,
@@ -162,10 +151,6 @@ RegisterNUICallback('EditProp', function(data, cb)
                 SetEntityCoords(e, origPos.x, origPos.y, origPos.z, false, false, false, false)
                 SetEntityQuaternion(e, oqx, oqy, oqz, oqw)
                 FreezeEntityPosition(e, true)
-                SetEntityCollision(e, true, true)
-            end
-        end, function(e)
-            if DoesEntityExist(e) then 
                 SetEntityCollision(e, true, true)
             end
         end)
