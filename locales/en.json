@@ -6,6 +6,7 @@
 
     "gizmo_vehicle_warning": "Gizmo cannot be used while in a vehicle",
     "gizmo_invalid_entity": "Entity does not exist",
+    "gizmo_networked_entity": "Cannot manipulate networked entities",
     "gizmo_outside_zone": "You cannot place a prop outside your allowed zone",
 
     "logs_new_prop_title": "Prop Placed",

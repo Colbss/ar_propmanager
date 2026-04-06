@@ -51,7 +51,7 @@ Levels are cumulative - each level includes all levels below it.
 | 3 | `superadmin` | View and edit the player access list |
 
 ### Exports
-Other resources can open the gizmo for any entity:
+Other resources can open the gizmo for any **non-networked** entity:
 
 ```lua
 exports.ar_propmanager:OpenGizmo(entity, options, onFinish, onCancel)

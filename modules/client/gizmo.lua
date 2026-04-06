@@ -163,6 +163,15 @@ function OpenGizmo(entity, options, onFinish, onCancel)
         return
     end
 
+    if NetworkGetEntityIsNetworked(entity) then
+        lib.notify({
+            description = locale('gizmo_networked_entity'),
+            type = 'error'
+        })
+        onCancel()
+        return
+    end
+
     options = options or {}
 
     currentGizmoEntity = entity
